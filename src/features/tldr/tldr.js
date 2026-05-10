@@ -7,7 +7,7 @@ export function renderTldr() {
   document.getElementById('content').innerHTML = `
     <div class="screen">
       <div class="notice blue">
-        Paste an email, message, letter, or instruction. Anchor pulls out what matters.
+        Paste an email, message, letter, or instruction. Bowline pulls out what matters.
       </div>
       <textarea id="tldr-in" placeholder="Paste the message here…" style="min-height:140px">${state.tldrInput}</textarea>
 
