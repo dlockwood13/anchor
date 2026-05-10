@@ -7,7 +7,7 @@ export function register(screenName, renderFn) {
 }
 
 export function go(s) {
-  state.screen  = s;
+  state.screen    = s;
   state.planMode  = null;
   state.stuckFlow = false;
   state.resetMode = null;
@@ -24,8 +24,22 @@ export function render() {
   if (fn) fn();
 }
 
-export function setTopbar(title, sub = '') {
+/**
+ * Sets the topbar with the Bowline brand mark + title + optional subtitle.
+ * Pass `branded: false` for the splash screen, which renders its own header.
+ */
+export function setTopbar(title, sub = '', { branded = true } = {}) {
+  if (!branded) {
+    document.getElementById('topbar-content').innerHTML = '';
+    return;
+  }
+
   document.getElementById('topbar-content').innerHTML = `
-    <h1><span class="anchor-dot"></span> ${title}</h1>
-    ${sub ? `<p class="sub">${sub}</p>` : ''}`;
+    <div class="topbar-row">
+      <svg class="bowline-mark" aria-hidden="true"><use href="#bowline-mark"/></svg>
+      <div>
+        <h1>${title}</h1>
+        ${sub ? `<p class="sub">${sub}</p>` : ''}
+      </div>
+    </div>`;
 }
