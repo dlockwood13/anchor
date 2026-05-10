@@ -1,10 +1,14 @@
-# Anchor
+# Bowline
 
-**A calmer way through your day.**
+> **A calmer way through your day.**
+>
+> *Structure when you need it. Never trapped by it.*
 
-Anchor is a daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, anxiety-related executive dysfunction, sensory processing differences, burnout, and chronic overwhelm.
+Bowline is a daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, anxiety-related executive dysfunction, sensory processing differences, burnout, and chronic overwhelm.
 
-> The user is not the problem. The environment, task structure, sensory load, ambiguity, and timing may be the problem. Anchor helps modify those conditions.
+Named after the sailor's knot — known as the king of knots — that holds firm under load but unties cleanly when you're ready to move.
+
+> The user is not the problem. The environment, task structure, sensory load, ambiguity, and timing may be. Bowline helps modify those conditions.
 
 ---
 
@@ -12,54 +16,58 @@ Anchor is a daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, anxi
 
 | Section | Purpose |
 |---------|---------|
-| **Today** | Mood check-in, task anchors, essentials view |
-| **Now** | One task at a time, with a full "I'm stuck" flow |
-| **Plan** | Brain dump, task breakdown (AI), energy-based planning, step-by-step routines |
-| **TL;DR** | Paste any message — get the key point, action items, tone, or a draft reply (AI) |
-| **Reset** | Guided regulation flows for 8 types of overwhelm |
-| **Me** | Support resource links, communication scripts, sensory tools, essentials, preferences |
+| **Today**   | Mood check-in, task anchors, essentials view |
+| **Now**     | One task at a time, with a full "I'm stuck" flow |
+| **Plan**    | Brain dump, AI task breakdown, energy-based planning, routines |
+| **TL;DR**   | Paste any message — get the key point, action items, tone, or a draft reply (AI) |
+| **Reset**   | Guided regulation flows for 8 types of overwhelm |
+| **Journey** | Diagnosis tracker — 9 stages, with scripts for GP and workplace |
+| **Me**      | Communication scripts, sensory tools, support resource library |
 
 ---
 
-## Design decisions
+## Brand
 
-### Typography — Atkinson Hyperlegible
-Designed for low-vision and dyslexic readers. Letterforms are deliberately distinct to prevent common reversals (b/d, p/q) and character spacing reduces visual crowding.
+Full guidelines are in [`docs/brand.md`](docs/brand.md).
 
-### Colour with meaning
-Each colour maps to a function, not decoration:
-- **Teal** — action and progress
-- **Lavender** — thinking and processing
-- **Peach / amber** — caution and sensory load
-- **Sky blue** — calm information
+- **Name:** Bowline (pronounced *boh-lin*)
+- **Primary colour:** `#3F8F73` (deep teal)
+- **Wordmark colour:** `#0E3D2E`
+- **Typeface:** Atkinson Hyperlegible (regular + bold only)
+- **Logo:** monoline knot mark — see `src/assets/bowline-mark.svg`
 
-### No shame states
-Missed tasks say "This did not happen yet." There are no streaks, scores, or "try harder" prompts.
+The bowline mark uses `stroke="currentColor"` so it adapts to whatever colour its parent uses — making dark mode and inverted variants automatic.
 
 ---
 
 ## File structure
 
 ```
-anchor/
+bowline/
 ├── index.html
 ├── README.md
+├── docs/
+│   └── brand.md                       # Brand guidelines
 └── src/
+    ├── assets/
+    │   └── bowline-mark.svg           # Logo mark, scalable, monochrome
     ├── styles/
-    │   └── main.css
+    │   └── main.css                   # Brand tokens + component styles
     ├── data/
-    │   └── state.js
+    │   └── state.js                   # Single source of truth + BRAND constants
     ├── app/
-    │   └── router.js
+    │   └── router.js                  # Navigation, branded topbar
     ├── services/
-    │   └── api.js
+    │   └── api.js                     # Anthropic API for AI features
     └── features/
+        ├── splash/splash.js           # Welcome screen with brand mark
         ├── today/today.js
         ├── now/now.js
         ├── plan/plan.js
         ├── tldr/tldr.js
         ├── reset/reset.js
-        └── me/me.js
+        ├── diagnosis/diagnosis.js     # 9-stage journey tracker
+        └── me/me.js                   # Brand-headed support library
 ```
 
 ---
@@ -71,71 +79,89 @@ This is a plain HTML/JS app using ES modules — no build step required.
 ### Run locally
 
 ```bash
-# Clone the repo
-git clone https://github.com/your-username/anchor.git
-cd anchor
-
-# Serve with any static file server
-npx serve .
-# or
-python3 -m http.server 3000
+git clone https://github.com/your-username/bowline.git
+cd bowline
+npx serve .                            # or python3 -m http.server 3000
 ```
 
-Then open `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-> **Note:** ES modules require a local server. Opening `index.html` directly via `file://` will not work in most browsers.
+> ES modules require a server. Opening `index.html` directly via `file://` will not work.
 
 ### Deploy to GitHub Pages
 
-1. Push your code to the `main` branch
-2. Go to **Settings → Pages**
-3. Set source to **Deploy from branch → main → / (root)**
-4. Your app will be live at `https://your-username.github.io/anchor`
+1. Push to `main`
+2. Settings → Pages → Deploy from branch → `main` → `/ (root)`
+3. App live at `https://your-username.github.io/bowline`
 
 ---
 
 ## AI features
 
-The Plan (task breakdown) and TL;DR sections call the Anthropic API directly from the browser.
+The Plan (task breakdown) and TL;DR sections call the Anthropic API directly from the browser. **For production, proxy these through a backend** so your API key isn't exposed.
 
-**For production use**, proxy these requests through your own backend so your API key is never exposed in client-side code.
-
-For **local development only**, add your key to `src/services/api.js`:
+For local development, add your key to `src/services/api.js`:
 
 ```js
 headers: {
   'Content-Type': 'application/json',
-  'x-api-key': 'YOUR_KEY_HERE',         // local dev only — never commit this
+  'x-api-key': 'YOUR_KEY_HERE',         // never commit
   'anthropic-version': '2023-06-01',
-},
+}
 ```
+
+---
+
+## Design principles
+
+### 1. Predictability
+Same things in the same places every day. Stable navigation. No surprise interactions.
+
+### 2. One decision at a time
+Each screen asks for one thing. No "plan your day, set goals, choose reminders" mega-prompts.
+
+### 3. Regulation before productivity
+If the user is overwhelmed, Bowline doesn't push action — it offers a reset first.
+
+### 4. Externalise executive function
+Sequences, reminders, first steps, scripts, and decisions live in the app — not in working memory.
+
+### 5. No shame states
+Missed tasks say "This did not happen yet." No streaks, scores, "try harder" language, or failure styling.
+
+### 6. Function-mapped colour
+Teal = action. Lavender = thinking. Peach/amber = sensory caution. Sky = calm information. Colour is never decorative.
 
 ---
 
 ## Accessibility
 
-- **Atkinson Hyperlegible** font throughout
+- **Atkinson Hyperlegible** font throughout — designed for dyslexia and low vision
 - All interactive elements have `aria-label` or visible labels
-- Colour is never the only indicator of meaning — text labels always accompany colour
-- Large tap targets (minimum 44px)
-- Dark mode supported via CSS custom properties
-- Reduced motion respected via `prefers-reduced-motion` (add to CSS as needed)
-- `sr-only` class available for screen-reader-only content
+- Colour is never the only indicator of meaning
+- Minimum 44px tap targets
+- Dark mode supported via `prefers-color-scheme`
+- `sr-only` class for screen-reader-only content
 
 ---
 
-## Support resources (Me tab)
+## Roadmap
 
-The Me section links to curated external resources across four categories:
-
-- **ADHD** — ADHD Foundation, CHADD, How to ADHD, ADDitude Magazine
-- **Autism** — Autistic UK, Autism Toolbox, Ambitious About Autism
-- **Strategies** — Pomodoro, interoception, sensory diet, executive function
-- **Crisis** — Mind, Samaritans, Shout (text 85258), NHS crisis care
+- [ ] Replace approximated bowline mark with proper illustrator-drawn version
+- [ ] Persistent storage (tasks, preferences across sessions)
+- [ ] Onboarding flow (mood, sensory, reminder, neurodiversity profile)
+- [ ] Calendar integration (read-only)
+- [ ] Body doubling timer
+- [ ] Voice input
+- [ ] Read-aloud mode
+- [ ] PWA / installable app
+- [ ] Offline support
+- [ ] Backend proxy for AI calls
+- [ ] Support person sharing (opt-in, privacy-first)
 
 ---
 
-## Brand voice
+## Voice
 
 **Use:** Start with one step. You can reduce this. The plan can change. This is information, not failure. A smaller version still counts. Restart from any step.
 
@@ -143,16 +169,6 @@ The Me section links to curated external resources across four categories:
 
 ---
 
-## Roadmap
+## Licence
 
-- [ ] Persistent storage (tasks, preferences across sessions)
-- [ ] Onboarding flow
-- [ ] Calendar integration
-- [ ] Body doubling timer
-- [ ] Voice input
-- [ ] Read-aloud mode
-- [ ] Object permanence notes ("where I put it")
-- [ ] Support person sharing (opt-in, privacy-first)
-- [ ] Wearable integration
-- [ ] PWA / installable app
-- [ ] Offline support
+TBD — likely MIT for code, with a separate notice for the brand and trademark.
