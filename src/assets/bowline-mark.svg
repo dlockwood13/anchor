@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bowline knot mark">
+  <title>Bowline</title>
+  <desc>A calmer way through your day</desc>
+  <g fill="none" stroke="#3F8F73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Working loop (large circle) -->
+    <circle cx="28" cy="40" r="18" />
+    <!-- Crown knot (small loop above) -->
+    <ellipse cx="34" cy="22" rx="9" ry="11" />
+    <!-- Standing line coming up -->
+    <path d="M 38 8 L 38 18" />
+    <!-- Working end through the loop -->
+    <path d="M 38 30 Q 36 35 28 36" />
+  </g>
+</svg>
