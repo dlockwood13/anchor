@@ -70,13 +70,11 @@ export function renderMe() {
   document.getElementById('content').innerHTML = `
     <div class="screen">
 
-      <!-- Branded header card -->
-      <div class="card teal" style="display:flex;align-items:center;gap:14px">
-        <svg class="bowline-mark-lg" aria-hidden="true"><use href="#bowline-mark"/></svg>
-        <div>
-          <div class="card-main" style="font-size:18px">${BRAND.name}</div>
-          <div class="card-sub">${BRAND.tagline}</div>
-        </div>
+      <!-- Branded header — uses the full lockup image -->
+      <div class="card teal" style="text-align:center;padding:1.5rem 1.25rem">
+        <img src="src/assets/bowline-lockup.png"
+             alt="Bowline — A calmer way through your day"
+             style="max-width:100%;height:auto;max-height:80px" />
       </div>
 
       <!-- Support tabs -->
