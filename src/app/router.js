@@ -25,8 +25,8 @@ export function render() {
 }
 
 /**
- * Sets the topbar with the Bowline brand mark + title + optional subtitle.
- * Pass `branded: false` for the splash screen, which renders its own header.
+ * Top bar with the Bowline icon mark + screen title.
+ * Pass `branded: false` for the splash screen which renders its own header.
  */
 export function setTopbar(title, sub = '', { branded = true } = {}) {
   if (!branded) {
@@ -36,7 +36,7 @@ export function setTopbar(title, sub = '', { branded = true } = {}) {
 
   document.getElementById('topbar-content').innerHTML = `
     <div class="topbar-row">
-      <svg class="bowline-mark" aria-hidden="true"><use href="#bowline-mark"/></svg>
+      <img src="src/assets/bowline-icon.png" alt="" class="bowline-mark" />
       <div>
         <h1>${title}</h1>
         ${sub ? `<p class="sub">${sub}</p>` : ''}
