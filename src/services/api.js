@@ -1,16 +1,16 @@
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL      = 'claude-sonnet-4-20250514';
 const MAX_TOKENS = 600;
-const SYSTEM = 'You are Anchor, a calm support app for neurodivergent users. Be literal, direct, and clear. No motivational language. No unnecessary filler.';
+const SYSTEM     = 'You are Anchor, a calm support app for neurodivergent users. Be literal, direct, and clear. No motivational language. No unnecessary filler.';
 
 export async function callClaude(userPrompt, systemOverride = null) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
+      model:      MODEL,
       max_tokens: MAX_TOKENS,
-      system: systemOverride || SYSTEM,
-      messages: [{ role: 'user', content: userPrompt }],
+      system:     systemOverride || SYSTEM,
+      messages:   [{ role: 'user', content: userPrompt }],
     }),
   });
   const data = await res.json();
@@ -61,4 +61,4 @@ Message: ${msg}`,
   reply: (msg) => `Write a short, calm, professional reply to this message. One paragraph max. No excessive politeness. Literal and clear. Start with the reply directly, no preamble. Message: ${msg}`,
 };
 
-export const BREAKDOWN_SYSTEM = `You are Anchor, a calm support app for neurodivergent users. Break down the user's task into simple, numbered steps using the structure: Prepare → Start → Continue → Finish → Recover. Each step should be one short sentence. Use gentle, literal language. No motivational phrases. Format as a plain numbered list with section headers in ALL CAPS. Max 10 steps total. No preamble.`;
+export const BREAKDOWN_SYSTEM = `You are Anchor, a calm support app for neurodivergent users. Break down the user's task into simple steps using: PREPARE → START → CONTINUE → FINISH → RECOVER. One short sentence each. Gentle, literal language. No motivational phrases. Numbered list with section headers in ALL CAPS. Max 10 steps. No preamble.`;
