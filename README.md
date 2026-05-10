@@ -1,174 +1,60 @@
-# Bowline
+# Brand assets
 
-> **A calmer way through your day.**
->
-> *Structure when you need it. Never trapped by it.*
+Drop the two brand image files into this folder. The app expects them at these exact filenames:
 
-Bowline is a daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, anxiety-related executive dysfunction, sensory processing differences, burnout, and chronic overwhelm.
+## Required files
 
-Named after the sailor's knot — known as the king of knots — that holds firm under load but unties cleanly when you're ready to move.
+### `bowline-icon.png`
 
-> The user is not the problem. The environment, task structure, sensory load, ambiguity, and timing may be. Bowline helps modify those conditions.
+The square app-icon style mark — teal background with the white knot.
 
----
+| Use | Size in app |
+|-----|-------------|
+| Topbar (every screen) | 38 × 38 px |
+| Me page header (replaced by lockup) | — |
+| Favicon (32×32, 192×192) | scaled |
+| Apple touch icon | 180 × 180 |
 
-## What it does
+**Recommended export:** `512 × 512 px` PNG. The browser scales it down — but uploading a high-resolution master means it stays crisp on Retina displays and any future use cases (app store, social avatars, etc.).
 
-| Section | Purpose |
-|---------|---------|
-| **Today**   | Mood check-in, task anchors, essentials view |
-| **Now**     | One task at a time, with a full "I'm stuck" flow |
-| **Plan**    | Brain dump, AI task breakdown, energy-based planning, routines |
-| **TL;DR**   | Paste any message — get the key point, action items, tone, or a draft reply (AI) |
-| **Reset**   | Guided regulation flows for 8 types of overwhelm |
-| **Journey** | Diagnosis tracker — 9 stages, with scripts for GP and workplace |
-| **Me**      | Communication scripts, sensory tools, support resource library |
+### `bowline-lockup.png`
 
----
+The horizontal lockup — knot mark + "Bowline" wordmark + divider + "A CALMER WAY / through your day" tagline. (The second image you supplied.)
 
-## Brand
+| Use | Size in app |
+|-----|-------------|
+| Splash screen | up to 100 px tall, max 100% width |
+| Me page header | up to 80 px tall |
+| Open Graph / social sharing preview | scaled |
 
-Full guidelines are in [`docs/brand.md`](docs/brand.md).
+**Recommended export:** `1200 × 320 px` PNG with a transparent background. This works across all the contexts above and makes a good social-share preview at the same time.
 
-- **Name:** Bowline (pronounced *boh-lin*)
-- **Primary colour:** `#3F8F73` (deep teal)
-- **Wordmark colour:** `#0E3D2E`
-- **Typeface:** Atkinson Hyperlegible (regular + bold only)
-- **Logo:** monoline knot mark — see `src/assets/bowline-mark.svg`
+## Where they're referenced
 
-The bowline mark uses `stroke="currentColor"` so it adapts to whatever colour its parent uses — making dark mode and inverted variants automatic.
+| File | Reference |
+|------|-----------|
+| `index.html` | favicons + Open Graph meta tag |
+| `src/app/router.js` | topbar mark on every screen |
+| `src/features/splash/splash.js` | splash screen lockup |
+| `src/features/me/me.js` | Me page header lockup |
 
----
+## Tips
 
-## File structure
+- **Transparent background** is essential for the lockup — it sits inside coloured cards in the Me section, so any white background will show.
+- **The icon can have its teal background baked in** — it always sits on a neutral surface (topbar, app icon).
+- If you ever want to recolour the mark in code later, supply a separate transparent-background version and swap CSS `filter` properties to recolour it. But you don't need this for the MVP.
 
-```
-bowline/
-├── index.html
-├── README.md
-├── docs/
-│   └── brand.md                       # Brand guidelines
-└── src/
-    ├── assets/
-    │   └── bowline-mark.svg           # Logo mark, scalable, monochrome
-    ├── styles/
-    │   └── main.css                   # Brand tokens + component styles
-    ├── data/
-    │   └── state.js                   # Single source of truth + BRAND constants
-    ├── app/
-    │   └── router.js                  # Navigation, branded topbar
-    ├── services/
-    │   └── api.js                     # Anthropic API for AI features
-    └── features/
-        ├── splash/splash.js           # Welcome screen with brand mark
-        ├── today/today.js
-        ├── now/now.js
-        ├── plan/plan.js
-        ├── tldr/tldr.js
-        ├── reset/reset.js
-        ├── diagnosis/diagnosis.js     # 9-stage journey tracker
-        └── me/me.js                   # Brand-headed support library
-```
+## Optional extras
 
----
+If you want to add later:
 
-## Getting started
+- `bowline-icon-dark.png` — white-stroke knot on transparent background, for use in the topbar in dark mode (the image-based mark doesn't auto-adapt the way the SVG one did)
+- `bowline-mark.svg` — a vector version of the icon, for the favicon and any place where infinite scaling matters
+- `bowline-lockup-dark.png` — light-coloured wordmark for dark backgrounds
+- `bowline-og.png` — purpose-built 1200 × 630 social sharing image with the lockup centred on a clean background
 
-This is a plain HTML/JS app using ES modules — no build step required.
+## Dark mode caveat
 
-### Run locally
+The current setup uses the same teal-background icon in light and dark mode. It still looks good against the dark topbar (the icon is self-contained) but the wordmark in the lockup is dark green — it'll look a bit muted on dark backgrounds.
 
-```bash
-git clone https://github.com/your-username/bowline.git
-cd bowline
-npx serve .                            # or python3 -m http.server 3000
-```
-
-Open `http://localhost:3000`.
-
-> ES modules require a server. Opening `index.html` directly via `file://` will not work.
-
-### Deploy to GitHub Pages
-
-1. Push to `main`
-2. Settings → Pages → Deploy from branch → `main` → `/ (root)`
-3. App live at `https://your-username.github.io/bowline`
-
----
-
-## AI features
-
-The Plan (task breakdown) and TL;DR sections call the Anthropic API directly from the browser. **For production, proxy these through a backend** so your API key isn't exposed.
-
-For local development, add your key to `src/services/api.js`:
-
-```js
-headers: {
-  'Content-Type': 'application/json',
-  'x-api-key': 'YOUR_KEY_HERE',         // never commit
-  'anthropic-version': '2023-06-01',
-}
-```
-
----
-
-## Design principles
-
-### 1. Predictability
-Same things in the same places every day. Stable navigation. No surprise interactions.
-
-### 2. One decision at a time
-Each screen asks for one thing. No "plan your day, set goals, choose reminders" mega-prompts.
-
-### 3. Regulation before productivity
-If the user is overwhelmed, Bowline doesn't push action — it offers a reset first.
-
-### 4. Externalise executive function
-Sequences, reminders, first steps, scripts, and decisions live in the app — not in working memory.
-
-### 5. No shame states
-Missed tasks say "This did not happen yet." No streaks, scores, "try harder" language, or failure styling.
-
-### 6. Function-mapped colour
-Teal = action. Lavender = thinking. Peach/amber = sensory caution. Sky = calm information. Colour is never decorative.
-
----
-
-## Accessibility
-
-- **Atkinson Hyperlegible** font throughout — designed for dyslexia and low vision
-- All interactive elements have `aria-label` or visible labels
-- Colour is never the only indicator of meaning
-- Minimum 44px tap targets
-- Dark mode supported via `prefers-color-scheme`
-- `sr-only` class for screen-reader-only content
-
----
-
-## Roadmap
-
-- [ ] Replace approximated bowline mark with proper illustrator-drawn version
-- [ ] Persistent storage (tasks, preferences across sessions)
-- [ ] Onboarding flow (mood, sensory, reminder, neurodiversity profile)
-- [ ] Calendar integration (read-only)
-- [ ] Body doubling timer
-- [ ] Voice input
-- [ ] Read-aloud mode
-- [ ] PWA / installable app
-- [ ] Offline support
-- [ ] Backend proxy for AI calls
-- [ ] Support person sharing (opt-in, privacy-first)
-
----
-
-## Voice
-
-**Use:** Start with one step. You can reduce this. The plan can change. This is information, not failure. A smaller version still counts. Restart from any step.
-
-**Avoid:** You failed. Crush your day. Be more disciplined. You broke your streak. Just focus. Try harder.
-
----
-
-## Licence
-
-TBD — likely MIT for code, with a separate notice for the brand and trademark.
+If you care about dark mode polish, add a `bowline-lockup-dark.png` with light-coloured text and update `splash.js` and `me.js` to swap based on `prefers-color-scheme`. Happy to wire this up if you want.
