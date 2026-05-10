@@ -3,35 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anchor — A calmer way through your day</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <title>Bowline — A calmer way through your day</title>
+  <meta name="description" content="A daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, executive dysfunction, and burnout." />
+  <meta name="theme-color" content="#3F8F73" />
+
+  <link rel="icon" type="image/svg+xml" href="src/assets/bowline-mark.svg" />
+  <link rel="apple-touch-icon" href="src/assets/bowline-mark.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <link rel="stylesheet" href="src/styles/main.css" />
 </head>
 <body>
+
+  <!-- ─── SVG sprite (define the bowline mark once, use everywhere) ─── -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="bowline-mark" viewBox="0 0 64 64">
+        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="28" cy="40" r="18" />
+          <ellipse cx="34" cy="22" rx="9" ry="11" />
+          <path d="M 38 8 L 38 18" />
+          <path d="M 38 30 Q 36 35 28 36" />
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
   <div class="app" id="app">
     <div class="topbar">
-      <div id="topbar-content">
-        <h1><span class="anchor-dot"></span> Anchor</h1>
-        <p class="sub">A calmer way through your day</p>
-      </div>
+      <div id="topbar-content"></div>
     </div>
     <div class="content" id="content"></div>
     <nav class="nav">
-      <button onclick="go('today')"     id="nb-today">    <i class="ti ti-sun" aria-hidden="true"></i>Today</button>
-      <button onclick="go('now')"       id="nb-now">      <i class="ti ti-player-play" aria-hidden="true"></i>Now</button>
-      <button onclick="go('plan')"      id="nb-plan">     <i class="ti ti-checklist" aria-hidden="true"></i>Plan</button>
-      <button onclick="go('tldr')"      id="nb-tldr">     <i class="ti ti-message-2" aria-hidden="true"></i>TL;DR</button>
-      <button onclick="go('reset')"     id="nb-reset">    <i class="ti ti-refresh" aria-hidden="true"></i>Reset</button>
-      <button onclick="go('diagnosis')" id="nb-diagnosis"><i class="ti ti-map" aria-hidden="true"></i>Journey</button>
-      <button onclick="go('me')"        id="nb-me">       <i class="ti ti-user" aria-hidden="true"></i>Me</button>
+      <button onclick="go('today')"     id="nb-today">    <i class="ti ti-sun"            aria-hidden="true"></i>Today</button>
+      <button onclick="go('now')"       id="nb-now">      <i class="ti ti-player-play"    aria-hidden="true"></i>Now</button>
+      <button onclick="go('plan')"      id="nb-plan">     <i class="ti ti-checklist"      aria-hidden="true"></i>Plan</button>
+      <button onclick="go('tldr')"      id="nb-tldr">     <i class="ti ti-message-2"      aria-hidden="true"></i>TL;DR</button>
+      <button onclick="go('reset')"     id="nb-reset">    <i class="ti ti-refresh"        aria-hidden="true"></i>Reset</button>
+      <button onclick="go('diagnosis')" id="nb-diagnosis"><i class="ti ti-map"            aria-hidden="true"></i>Journey</button>
+      <button onclick="go('me')"        id="nb-me">       <i class="ti ti-user"           aria-hidden="true"></i>Me</button>
     </nav>
   </div>
 
   <script type="module">
     import { go } from './src/app/router.js';
+    import './src/features/splash/splash.js';
     import './src/features/today/today.js';
     import './src/features/now/now.js';
     import './src/features/plan/plan.js';
@@ -41,7 +60,7 @@
     import './src/features/me/me.js';
 
     window.go = go;
-    go('today');
+    go('splash');
   </script>
 </body>
 </html>
