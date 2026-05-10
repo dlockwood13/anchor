@@ -4,31 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anchor — A calmer way through your day</title>
-  <link rel="stylesheet" href="src/styles/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link rel="stylesheet" href="src/styles/main.css" />
 </head>
 <body>
   <div class="app" id="app">
-    <div class="topbar" id="topbar">
-      <div id="topbar-content"></div>
+    <div class="topbar">
+      <div id="topbar-content">
+        <h1><span class="anchor-dot"></span> Anchor</h1>
+        <p class="sub">A calmer way through your day</p>
+      </div>
     </div>
     <div class="content" id="content"></div>
-    <nav class="nav" id="nav">
+    <nav class="nav">
       <button onclick="go('today')" id="nb-today"><i class="ti ti-sun" aria-hidden="true"></i>Today</button>
-      <button onclick="go('now')" id="nb-now"><i class="ti ti-player-play" aria-hidden="true"></i>Now</button>
-      <button onclick="go('plan')" id="nb-plan"><i class="ti ti-checklist" aria-hidden="true"></i>Plan</button>
-      <button onclick="go('tldr')" id="nb-tldr"><i class="ti ti-message-2" aria-hidden="true"></i>TL;DR</button>
+      <button onclick="go('now')"   id="nb-now"><i class="ti ti-player-play" aria-hidden="true"></i>Now</button>
+      <button onclick="go('plan')"  id="nb-plan"><i class="ti ti-checklist" aria-hidden="true"></i>Plan</button>
+      <button onclick="go('tldr')"  id="nb-tldr"><i class="ti ti-message-2" aria-hidden="true"></i>TL;DR</button>
       <button onclick="go('reset')" id="nb-reset"><i class="ti ti-refresh" aria-hidden="true"></i>Reset</button>
-      <button onclick="go('me')" id="nb-me"><i class="ti ti-user" aria-hidden="true"></i>Me</button>
+      <button onclick="go('me')"    id="nb-me"><i class="ti ti-user" aria-hidden="true"></i>Me</button>
     </nav>
   </div>
 
   <script type="module">
-    import { state } from './src/data/state.js';
     import { go } from './src/app/router.js';
-    window.go = go;
-    window.state = state;
-
     import './src/features/today/today.js';
     import './src/features/now/now.js';
     import './src/features/plan/plan.js';
@@ -36,6 +38,7 @@
     import './src/features/reset/reset.js';
     import './src/features/me/me.js';
 
+    window.go = go;
     go('today');
   </script>
 </body>
