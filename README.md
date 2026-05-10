@@ -10,12 +10,31 @@ Anchor is a daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, anxi
 
 ## What it does
 
-- **Today** — mood check-in, task anchors, essentials view
-- **Now** — one task at a time, with a full "I'm stuck" flow
-- **Plan** — brain dump, task breakdown (AI), energy-based planning, step-by-step routines
-- **TL;DR** — paste any message; get the key point, action items, tone, or a draft reply (AI)
-- **Reset** — guided regulation flows for 8 types of overwhelm
-- **Me** — communication scripts, sensory tools, essentials checklist, preferences
+| Section | Purpose |
+|---------|---------|
+| **Today** | Mood check-in, task anchors, essentials view |
+| **Now** | One task at a time, with a full "I'm stuck" flow |
+| **Plan** | Brain dump, task breakdown (AI), energy-based planning, step-by-step routines |
+| **TL;DR** | Paste any message — get the key point, action items, tone, or a draft reply (AI) |
+| **Reset** | Guided regulation flows for 8 types of overwhelm |
+| **Me** | Support resource links, communication scripts, sensory tools, essentials, preferences |
+
+---
+
+## Design decisions
+
+### Typography — Atkinson Hyperlegible
+Designed for low-vision and dyslexic readers. Letterforms are deliberately distinct to prevent common reversals (b/d, p/q) and character spacing reduces visual crowding.
+
+### Colour with meaning
+Each colour maps to a function, not decoration:
+- **Teal** — action and progress
+- **Lavender** — thinking and processing
+- **Peach / amber** — caution and sensory load
+- **Sky blue** — calm information
+
+### No shame states
+Missed tasks say "This did not happen yet." There are no streaks, scores, or "try harder" prompts.
 
 ---
 
@@ -25,29 +44,29 @@ Anchor is a daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, anxi
 anchor/
 ├── index.html
 ├── README.md
-├── src/
-│   ├── styles/
-│   │   └── main.css
-│   ├── data/
-│   │   └── state.js
-│   ├── app/
-│   │   └── router.js
-│   ├── services/
-│   │   └── api.js
-│   └── features/
-│       ├── today/today.js
-│       ├── now/now.js
-│       ├── plan/plan.js
-│       ├── tldr/tldr.js
-│       ├── reset/reset.js
-│       └── me/me.js
+└── src/
+    ├── styles/
+    │   └── main.css
+    ├── data/
+    │   └── state.js
+    ├── app/
+    │   └── router.js
+    ├── services/
+    │   └── api.js
+    └── features/
+        ├── today/today.js
+        ├── now/now.js
+        ├── plan/plan.js
+        ├── tldr/tldr.js
+        ├── reset/reset.js
+        └── me/me.js
 ```
 
 ---
 
 ## Getting started
 
-This is a plain HTML/JS app with ES modules — no build step required.
+This is a plain HTML/JS app using ES modules — no build step required.
 
 ### Run locally
 
@@ -56,19 +75,19 @@ This is a plain HTML/JS app with ES modules — no build step required.
 git clone https://github.com/your-username/anchor.git
 cd anchor
 
-# Serve with any static server, e.g.:
+# Serve with any static file server
 npx serve .
 # or
 python3 -m http.server 3000
 ```
 
-Then open `http://localhost:3000` in your browser.
+Then open `http://localhost:3000`.
 
-> Note: ES modules require a server — opening `index.html` directly via `file://` will not work.
+> **Note:** ES modules require a local server. Opening `index.html` directly via `file://` will not work in most browsers.
 
 ### Deploy to GitHub Pages
 
-1. Push to your `main` branch
+1. Push your code to the `main` branch
 2. Go to **Settings → Pages**
 3. Set source to **Deploy from branch → main → / (root)**
 4. Your app will be live at `https://your-username.github.io/anchor`
@@ -77,44 +96,42 @@ Then open `http://localhost:3000` in your browser.
 
 ## AI features
 
-The Plan (task breakdown) and TL;DR features call the Anthropic API directly from the browser.
+The Plan (task breakdown) and TL;DR sections call the Anthropic API directly from the browser.
 
-For production use, you should proxy these requests through your own backend to keep your API key secure. Do not expose your API key in client-side code.
+**For production use**, proxy these requests through your own backend so your API key is never exposed in client-side code.
 
-To add your key for local development only, edit `src/services/api.js` and add an `Authorization` header:
+For **local development only**, add your key to `src/services/api.js`:
 
 ```js
 headers: {
   'Content-Type': 'application/json',
-  'x-api-key': 'YOUR_KEY_HERE',        // local dev only
+  'x-api-key': 'YOUR_KEY_HERE',         // local dev only — never commit this
   'anthropic-version': '2023-06-01',
-}
+},
 ```
 
 ---
 
-## Design principles
+## Accessibility
 
-- Predictable navigation — same places every day
-- One decision at a time
-- Regulation before productivity
-- No shame states — missed tasks are "not yet", not "failed"
-- No streaks, scores, or hustle language
+- **Atkinson Hyperlegible** font throughout
+- All interactive elements have `aria-label` or visible labels
+- Colour is never the only indicator of meaning — text labels always accompany colour
+- Large tap targets (minimum 44px)
+- Dark mode supported via CSS custom properties
+- Reduced motion respected via `prefers-reduced-motion` (add to CSS as needed)
+- `sr-only` class available for screen-reader-only content
 
 ---
 
-## Roadmap
+## Support resources (Me tab)
 
-- [ ] Persistent storage (tasks, preferences)
-- [ ] Calendar integration
-- [ ] Onboarding flow
-- [ ] Body doubling timer
-- [ ] Voice input
-- [ ] Read-aloud mode
-- [ ] Wearable integration
-- [ ] Object permanence notes
-- [ ] Support person sharing (opt-in)
-- [ ] PWA / installable app
+The Me section links to curated external resources across four categories:
+
+- **ADHD** — ADHD Foundation, CHADD, How to ADHD, ADDitude Magazine
+- **Autism** — Autistic UK, Autism Toolbox, Ambitious About Autism
+- **Strategies** — Pomodoro, interoception, sensory diet, executive function
+- **Crisis** — Mind, Samaritans, Shout (text 85258), NHS crisis care
 
 ---
 
@@ -123,3 +140,19 @@ headers: {
 **Use:** Start with one step. You can reduce this. The plan can change. This is information, not failure. A smaller version still counts. Restart from any step.
 
 **Avoid:** You failed. Crush your day. Be more disciplined. You broke your streak. Just focus. Try harder.
+
+---
+
+## Roadmap
+
+- [ ] Persistent storage (tasks, preferences across sessions)
+- [ ] Onboarding flow
+- [ ] Calendar integration
+- [ ] Body doubling timer
+- [ ] Voice input
+- [ ] Read-aloud mode
+- [ ] Object permanence notes ("where I put it")
+- [ ] Support person sharing (opt-in, privacy-first)
+- [ ] Wearable integration
+- [ ] PWA / installable app
+- [ ] Offline support
