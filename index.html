@@ -7,30 +7,27 @@
   <meta name="description" content="A daily support app for ADHD, autism, AuDHD, dyslexia, dyspraxia, executive dysfunction, and burnout." />
   <meta name="theme-color" content="#3F8F73" />
 
-  <link rel="icon" type="image/svg+xml" href="src/assets/bowline-mark.svg" />
-  <link rel="apple-touch-icon" href="src/assets/bowline-mark.svg" />
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32"   href="src/assets/bowline-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="src/assets/bowline-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180"      href="src/assets/bowline-icon.png" />
 
+  <!-- Open Graph (social sharing) -->
+  <meta property="og:title"       content="Bowline — A calmer way through your day" />
+  <meta property="og:description" content="Daily support for neurodivergent users. Structure when you need it. Never trapped by it." />
+  <meta property="og:image"       content="src/assets/bowline-lockup.png" />
+  <meta property="og:type"        content="website" />
+
+  <!-- Fonts + icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+  <!-- App styles -->
   <link rel="stylesheet" href="src/styles/main.css" />
 </head>
 <body>
-
-  <!-- ─── SVG sprite (define the bowline mark once, use everywhere) ─── -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <symbol id="bowline-mark" viewBox="0 0 64 64">
-        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="28" cy="40" r="18" />
-          <ellipse cx="34" cy="22" rx="9" ry="11" />
-          <path d="M 38 8 L 38 18" />
-          <path d="M 38 30 Q 36 35 28 36" />
-        </g>
-      </symbol>
-    </defs>
-  </svg>
 
   <div class="app" id="app">
     <div class="topbar">
