@@ -1,16 +1,24 @@
 import { state } from '../data/state.js';
+import { renderToday } from '../features/today/today.js';
+import { renderNow } from '../features/now/now.js';
+import { renderPlan } from '../features/plan/plan.js';
+import { renderTldr } from '../features/tldr/tldr.js';
+import { renderReset } from '../features/reset/reset.js';
+import { renderMe } from '../features/me/me.js';
 
-const registry = {};
-
-export function register(screenName, renderFn) {
-  registry[screenName] = renderFn;
-}
+const screens = {
+  today: renderToday,
+  now: renderNow,
+  plan: renderPlan,
+  tldr: renderTldr,
+  reset: renderReset,
+  me: renderMe,
+};
 
 export function go(s) {
-  state.screen  = s;
-  state.planMode  = null;
+  state.screen = s;
+  state.planMode = null;
   state.stuckFlow = false;
-  state.resetMode = null;
 
   document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
   const nb = document.getElementById('nb-' + s);
@@ -20,12 +28,11 @@ export function go(s) {
 }
 
 export function render() {
-  const fn = registry[state.screen];
+  const fn = screens[state.screen];
   if (fn) fn();
 }
 
 export function setTopbar(title, sub = '') {
-  document.getElementById('topbar-content').innerHTML = `
-    <h1><span class="anchor-dot"></span> ${title}</h1>
-    ${sub ? `<p class="sub">${sub}</p>` : ''}`;
+  document.getElementById('topbar-content').innerHTML =
+    `<h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ''}`;
 }
