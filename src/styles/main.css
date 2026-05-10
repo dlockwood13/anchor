@@ -36,7 +36,7 @@
   --bg-page:        #f7f6f2;
   --bg-card:        #ffffff;
 
-  --font: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font:  'Atkinson Hyperlegible', system-ui, sans-serif;
   --r-sm:   8px;
   --r-md:   12px;
   --r-lg:   18px;
@@ -133,7 +133,7 @@ body {
   padding: 1.25rem 1.25rem 0.5rem;
 }
 
-/* ─── Navigation ─────────────────────────────────────────── */
+/* ─── Navigation — 7 items, smaller text ────────────────── */
 .nav {
   display: flex;
   border-top: 2px solid var(--border);
@@ -144,23 +144,24 @@ body {
 
 .nav button {
   flex: 1;
-  padding: 8px 4px 6px;
+  padding: 7px 2px 5px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;           /* slightly smaller for 7 items */
   font-family: var(--font);
   font-weight: 700;
   color: var(--text-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   transition: color 0.15s;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  min-width: 0;             /* allow flex shrink */
 }
 
-.nav button i { font-size: 22px; }
+.nav button i { font-size: 20px; }
 .nav button.active { color: var(--teal); }
 .nav button:hover:not(.active) { color: var(--text-primary); }
 
@@ -181,7 +182,6 @@ body {
   margin-bottom: 0.85rem;
 }
 
-/* Colour-accent variants — left border only */
 .card.teal     { border-left: 5px solid var(--teal); }
 .card.lavender { border-left: 5px solid var(--lavender); }
 .card.peach    { border-left: 5px solid var(--peach); }
@@ -442,7 +442,7 @@ textarea:focus { outline: none; border-color: var(--teal); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── Support link cards ─────────────────────────────────── */
+/* ─── Support / link cards ───────────────────────────────── */
 .link-card {
   display: flex;
   align-items: center;
