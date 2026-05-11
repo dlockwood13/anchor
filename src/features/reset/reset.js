@@ -43,7 +43,6 @@ const RESETS = [
       { type: 'action',  text: 'Stand up and move for one minute.', tip: 'Stretch, pace, dance — whatever.' },
       { type: 'action',  text: 'Walk to another room and back.', tip: 'Even small movement helps.' },
       { type: 'action',  text: 'Make a drink — something with flavour.', tip: 'Cold water, tea, coffee, squash. Sip slowly.' },
-      { type: 'reflect', text: 'How is your body now?', detail: "More alert? Still flat? Either is OK — you've added input." },
       { type: 'choice',  text: 'Choose what comes next.' },
     ],
     recoveryHint: "If you're still flat, try a body-double timer — sometimes only structure breaks through.",
