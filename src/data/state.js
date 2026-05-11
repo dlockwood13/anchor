@@ -1,6 +1,6 @@
 export const state = {
   // ── Navigation ──────────────────────────────────────────
-  screen: 'splash',           // start at splash on first load
+  screen: 'splash',
 
   // ── Today ───────────────────────────────────────────────
   mood:      null,
@@ -12,8 +12,15 @@ export const state = {
     { id: 4, text: 'Appointment at 3 PM',  meta: 'Leave at 2:20 PM',       color: 'lavender', done: false },
   ],
 
-  // ── Now ─────────────────────────────────────────────────
-  stuckFlow: false,
+  // ── Now (full end-to-end flow) ──────────────────────────
+  nowView:        'main',        // main | stuck | smaller | bodyDouble | timer | aiSteps
+  stuckFlow:      false,
+  nowStuckReason: null,
+  nowDoubleTime:  null,
+  nowDoubleEnd:   null,
+  nowAiSteps:     null,
+  nowAiLoading:   false,
+  nowSmallerOpts: null,
 
   // ── Plan ────────────────────────────────────────────────
   planMode:  null,
@@ -25,8 +32,13 @@ export const state = {
   tldrOutput:  null,
   tldrLoading: false,
 
-  // ── Reset ───────────────────────────────────────────────
-  resetMode: null,
+  // ── Reset (full end-to-end flow) ────────────────────────
+  resetMode:     null,
+  resetView:     'picker',       // picker | flow | breathing | complete
+  resetStep:     0,
+  resetOutcome:  null,
+  breathPhase:   null,
+  breathRound:   null,
 
   // ── Diagnosis Journey ───────────────────────────────────
   diagnosisStage:    null,
@@ -38,7 +50,7 @@ export const state = {
 };
 
 export const ACCENT = {
-  teal:     '#3F8F73',   // updated brand teal
+  teal:     '#3F8F73',
   sky:      '#85B7EB',
   lavender: '#7F77DD',
   peach:    '#F0997B',
