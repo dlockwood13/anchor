@@ -141,6 +141,120 @@ const MOODS = [
   },
 ];
 
+// ─── Daily quotes, keyed by mood ──────────────────────────
+// Each mood has a pool. A day-of-year index picks one, so the
+// quote changes daily but stays stable if reopened the same day.
+const QUOTES = {
+  clear: [
+    { t: 'You do not have to do it all today. Just the next true thing.', a: null },
+    { t: 'Between stimulus and response there is a space. In that space is our power to choose.', a: 'Viktor Frankl' },
+    { t: 'A clear morning is a gift. Spend it on what matters, not on what is loudest.', a: null },
+    { t: 'Tend to the body and the mind will follow.', a: null },
+    { t: 'Be where your feet are.', a: null },
+    { t: 'The present moment is the only moment available to us, and it is the door to all moments.', a: 'Thich Nhat Hanh' },
+    { t: 'Capacity is not the same as obligation. Use today gently.', a: null },
+  ],
+  foggy: [
+    { t: 'The fog is not you. It is weather. Weather passes.', a: null },
+    { t: 'You do not have to think clearly to be doing something right.', a: null },
+    { t: 'When you cannot see far ahead, just take the next small step.', a: null },
+    { t: 'Slow is a pace, not a failure.', a: null },
+    { t: 'You are allowed to be a work in progress and a masterpiece at the same time.', a: 'Sophia Bush' },
+    { t: 'Today, less is the right amount.', a: null },
+    { t: 'The mind is like water. When it is turbulent, it is difficult to see. When it is calm, everything becomes clear.', a: 'Prasad Mahes' },
+  ],
+  tired: [
+    { t: 'Rest is not a reward for finishing. It is part of how you finish anything.', a: null },
+    { t: 'Almost everything will work again if you unplug it for a few minutes, including you.', a: 'Anne Lamott' },
+    { t: 'You cannot pour from an empty cup. Take care of yourself first.', a: null },
+    { t: 'Sleep is not lost time. It is the work that lets the rest of the work happen.', a: null },
+    { t: 'Tired is a signal, not a failure of character.', a: null },
+    { t: 'Today, lower the bar. Tomorrow will still be there.', a: null },
+    { t: 'Take rest; a field that has rested gives a bountiful crop.', a: 'Ovid' },
+  ],
+  anxious: [
+    { t: 'You have survived 100% of your worst days. The evidence is that you are here.', a: null },
+    { t: 'Anxiety is the dizziness of freedom.', a: 'Soren Kierkegaard' },
+    { t: 'Feelings come and go like clouds in a windy sky. Conscious breathing is my anchor.', a: 'Thich Nhat Hanh' },
+    { t: 'You do not have to control your thoughts. You just have to stop letting them control you.', a: 'Dan Millman' },
+    { t: 'Breathe out longer than you breathe in. Your nervous system is listening.', a: null },
+    { t: 'Worry pretends to be useful. It almost never is.', a: null },
+    { t: 'Right now, in this exact moment, you are safe enough to take one slow breath.', a: null },
+  ],
+  over: [
+    { t: 'When the world is too loud, smaller is wiser.', a: null },
+    { t: 'Quiet is not absence. It is medicine.', a: null },
+    { t: 'You are not too sensitive. The world is too loud.', a: null },
+    { t: 'Solitude is where I place my chaos to rest and awaken my inner peace.', a: 'Nikki Rowe' },
+    { t: 'Lower the lights. Soften the sound. The world can wait.', a: null },
+    { t: 'Sensory overload is not a personality flaw. It is a full inbox.', a: null },
+    { t: 'When in doubt, close the door. The next decision can wait.', a: null },
+  ],
+  burnt: [
+    { t: 'Burnout is not weakness. It is what happens when strong people carry too much for too long.', a: null },
+    { t: 'You do not need to set yourself on fire to keep other people warm.', a: null },
+    { t: 'Recovery is not a straight line. Today counts even if nothing visible got done.', a: null },
+    { t: 'Rest is resistance.', a: 'Tricia Hersey' },
+    { t: 'The most loving thing you can do today might be nothing at all.', a: null },
+    { t: 'You are allowed to disappoint people in order to stay alive to yourself.', a: null },
+    { t: 'There is virtue in work and there is virtue in rest. Use both and overlook neither.', a: 'Alan Cohen' },
+  ],
+  pain: [
+    { t: 'Pain is real. It is not a measure of your worth.', a: null },
+    { t: 'You are not the pain. You are the one noticing it.', a: null },
+    { t: 'Be patient with yourself. Self-growth is tender; it is holy ground.', a: 'Stephen Covey' },
+    { t: 'Surviving a hard day is an achievement. It counts.', a: null },
+    { t: 'Comfort is not a luxury today. It is medicine.', a: null },
+    { t: 'Soft is a strategy.', a: null },
+    { t: 'The body keeps the score. Listen to it.', a: 'Bessel van der Kolk' },
+  ],
+  sad: [
+    { t: 'Tears are how the heart speaks when words are not enough.', a: null },
+    { t: 'You do not have to be okay all the time. You just have to be here.', a: null },
+    { t: 'The wound is the place where the light enters you.', a: 'Rumi' },
+    { t: 'Sadness is not a problem to solve. It is a guest to sit with.', a: null },
+    { t: 'There is a crack in everything. That is how the light gets in.', a: 'Leonard Cohen' },
+    { t: 'You are allowed to feel everything you are feeling, even if you cannot explain it yet.', a: null },
+    { t: 'Be gentle with yourself. You are doing the best you can with what you have today.', a: null },
+  ],
+  angry: [
+    { t: 'Anger is a messenger. Listen to the message, then let it go.', a: null },
+    { t: 'Holding on to anger is like grasping a hot coal with the intent of throwing it at someone else.', a: 'attributed to the Buddha' },
+    { t: 'Your anger is information. It tells you where your line is.', a: null },
+    { t: 'Pause before you reply. The 10 minutes you wait will save you an hour of repair.', a: null },
+    { t: 'For every minute you remain angry, you give up sixty seconds of peace of mind.', a: 'Ralph Waldo Emerson' },
+    { t: 'Anger is not the enemy. Reacting from it before you have thought is.', a: null },
+    { t: 'Speak when you are angry and you will make the best speech you will ever regret.', a: 'Ambrose Bierce' },
+  ],
+  shut: [
+    { t: 'Shutdown is the system protecting itself. Trust it.', a: null },
+    { t: 'You do not have to be functional to be valuable.', a: null },
+    { t: 'Stillness is the gift you can give yourself today.', a: null },
+    { t: 'Sometimes the most important thing in a whole day is the rest we take between two deep breaths.', a: 'Etty Hillesum' },
+    { t: 'No decisions today. Tomorrow you will think more clearly.', a: null },
+    { t: 'You are not gone. You are quiet. There is a difference.', a: null },
+    { t: 'Pause. Soften. Let the world go on without you for an afternoon.', a: null },
+  ],
+  wired: [
+    { t: 'Energy without direction is noise. Pick one thing.', a: null },
+    { t: 'Move the body first. The mind will catch up.', a: null },
+    { t: 'You do not need to use all of today\'s energy today.', a: null },
+    { t: 'Restlessness is a form of attention looking for somewhere to land.', a: null },
+    { t: 'Channel the current, do not chase it.', a: null },
+    { t: 'A walk is a tiny pilgrimage.', a: null },
+    { t: 'The faster you go, the more you miss. Slow down enough to actually arrive.', a: null },
+  ],
+  notsure: [
+    { t: 'Not knowing is the most intimate.', a: 'Zen saying' },
+    { t: 'You do not have to name it to honour it.', a: null },
+    { t: 'Begin with the basics: water, food, breath, light. The rest will follow.', a: null },
+    { t: 'It is OK to be a question today, not an answer.', a: null },
+    { t: 'When in doubt, do less, but do it gently.', a: null },
+    { t: 'The cure for anything is salt water: sweat, tears, or the sea.', a: 'Isak Dinesen' },
+    { t: 'You are allowed to not know how you feel and still be moving forward.', a: null },
+  ],
+};
+
 // ─── Main render ──────────────────────────────────────────
 export function renderToday() {
   setTopbar('Today', 'A calmer way through your day');
@@ -293,6 +407,8 @@ function renderTodayView() {
       ${!state.essentialsMode ? `
         <button class="btn amber-btn" onclick="enableEssentials()"><i class="ti ti-minimize"></i> Show essentials only</button>
       ` : ''}
+
+      ${renderDailyQuote(mood)}
     </div>`;
 }
 
@@ -338,6 +454,39 @@ function getMoodInsight() {
     return 'A few harder days lately. What helped on the easier ones?';
   }
   return 'Your last week has been mostly manageable. Worth remembering when the next hard day comes.';
+}
+
+// ─── Daily quote (mood-matched, deterministic per day) ────
+function dayOfYear() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = (now - start) + ((start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000);
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function renderDailyQuote(mood) {
+  const pool = QUOTES[mood.k];
+  if (!pool || pool.length === 0) return '';
+
+  const idx = dayOfYear() % pool.length;
+  const q = pool[idx];
+
+  return `
+    <div class="section-label" style="margin-top:1.5rem">
+      <i class="ti ti-quote" style="color:var(--${mood.color});font-size:14px"></i> A thought for today
+    </div>
+    <div class="card ${mood.color}" style="text-align:center;padding:1.5rem 1.25rem">
+      <i class="ti ti-quote" style="font-size:24px;color:var(--${mood.color});opacity:0.5;display:block;margin-bottom:8px"></i>
+      <div style="font-size:15px;line-height:1.7;font-style:italic;color:var(--text-primary)">
+        ${q.t}
+      </div>
+      ${q.a ? `
+        <div style="font-size:12px;color:var(--text-muted);margin-top:10px;letter-spacing:0.3px">
+          — ${q.a}
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 
 // ─── Window handlers ──────────────────────────────────────
