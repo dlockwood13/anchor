@@ -1,1289 +1,966 @@
-import { state, ACCENT } from '../../data/state.js';
+import { state } from '../../data/state.js';
 import { register, setTopbar, go } from '../../app/router.js';
-import { callClaude } from '../../services/api.js';
 
-// Init local state
-if (!state.nowView)        state.nowView = 'main';
-if (!state.nowStuckReason) state.nowStuckReason = null;
-if (!state.nowTimerEnd)    state.nowTimerEnd = null;
-if (!state.nowTimerMins)   state.nowTimerMins = null;
-if (!state.nowAiSteps)     state.nowAiSteps = null;
-if (!state.nowAiLoading)   state.nowAiLoading = false;
+// ─── Local state ──────────────────────────────────────────
+if (!state.diagnosisStage)     state.diagnosisStage     = null;
+if (!state.diagnosisStageKey)  state.diagnosisStageKey  = null;
+if (!state.diagnosisTab)       state.diagnosisTab       = 'overview';
+if (!state.diagnosisChecked)   state.diagnosisChecked   = {}; // { stageKey: [bool, bool, ...] }
+if (!state.diagnosisNotes)     state.diagnosisNotes     = {}; // { stageKey: string }
 
-// Titration tracker state
-if (!state.titrationEntries) state.titrationEntries = []; // array of log entries
-if (!state.titrationDraft)   state.titrationDraft = null;  // entry being built
+// ─── Stage definitions (10 stages, full content) ──────────
+const STAGES = [
+  {
+    k: 'noticing', num: 1, color: 'lavender', icon: 'ti-bulb',
+    l: 'I think I might be neurodivergent',
+    sub: 'Noticing patterns',
+    what: 'You are noticing that life feels harder than it seems to for other people. You do not need to be certain yet. You just need enough reason to ask for help. At this stage, the goal is observation, not diagnosis.',
 
-const STUCK_OPTIONS = [
-  { k: 'start',   l: 'Do not know where to start', icon: 'ti-player-pause' },
-  { k: 'big',     l: 'It feels too big',           icon: 'ti-arrows-maximize' },
-  { k: 'steps',   l: 'Too many steps',             icon: 'ti-list-numbers' },
-  { k: 'boring',  l: 'It feels boring',            icon: 'ti-zzz' },
-  { k: 'anxious', l: 'I am anxious',               icon: 'ti-wind' },
-  { k: 'over',    l: 'I am overstimulated',        icon: 'ti-volume-3' },
-  { k: 'tired',   l: 'I am tired',                 icon: 'ti-moon' },
-  { k: 'forget',  l: 'I forgot why this matters',  icon: 'ti-question-mark' },
-  { k: 'unclear', l: 'I do not understand it',     icon: 'ti-help' },
-  { k: 'change',  l: 'Something changed',          icon: 'ti-route-x' },
+    next: [
+      'Start writing down examples of what is difficult, in your own words',
+      'Note how long things have been this way — childhood, recent, or always',
+      'Research ADHD, autism, dyslexia, dyspraxia, and see what resonates',
+      'Talk to someone you trust about what you have noticed',
+      'You do not need a diagnosis to start using support strategies today',
+    ],
+
+    prepare: [
+      'Keep a simple list of struggles — focus, sensory, social, emotional, sleep, work',
+      'Note any childhood examples you remember (school reports can help)',
+      'Write down what makes things harder and what makes them easier',
+      'Identify the patterns that feel most consistent across years',
+      'Consider whether anyone in your family has been diagnosed',
+    ],
+
+    scripts: [
+      { l: 'Thinking it out loud to yourself',
+        t: 'I have been noticing some patterns in how I function that I want to understand better. They have been there for a long time. I think it might be worth exploring whether I am neurodivergent.' },
+      { l: 'Mentioning it to a friend or partner',
+        t: 'I have been thinking about something for a while and want to share it. I have been noticing patterns in how I think and feel — things like [example] — and I am wondering if I might be neurodivergent. I am not looking for advice yet, just want to say it out loud.' },
+    ],
+
+    support: [
+      'Use reminders and external structure now — you do not need a diagnosis first',
+      'Break tasks into steps using Bowline\'s task breakdown',
+      'Reduce unnecessary demands where you can',
+      'Wear headphones or earplugs if noise is difficult',
+      'Track what causes overwhelm using the mood log on Today',
+      'Read accounts by neurodivergent adults to see if their experiences resonate',
+    ],
+
+    links: [
+      { title: 'ADHD Foundation — Adult ADHD',
+        sub: 'UK-based charity with adult-focused information',
+        url: 'https://www.adhdfoundation.org.uk/information/adults/', icon: 'ti-brain', color: 'lavender' },
+      { title: 'National Autistic Society — signs of autism in adults',
+        sub: 'NHS-aligned overview of common autism traits',
+        url: 'https://www.autism.org.uk/advice-and-guidance/what-is-autism/the-history-of-autism/signs-of-autism-in-adults', icon: 'ti-heart', color: 'teal' },
+      { title: 'Understood — Adult ADHD signs',
+        sub: 'Accessible introduction to adult ADHD experience',
+        url: 'https://www.understood.org/articles/en/the-difference-between-adhd-in-kids-and-adults', icon: 'ti-book', color: 'sky' },
+      { title: 'Embrace Autism — RAADS-R screening',
+        sub: 'A widely-used screening questionnaire (not a diagnosis)',
+        url: 'https://embrace-autism.com/raads-r/', icon: 'ti-clipboard-check', color: 'amber' },
+    ],
+  },
+
+  {
+    k: 'collecting', num: 2, color: 'sky', icon: 'ti-notes',
+    l: 'I am collecting examples',
+    sub: 'Building your picture',
+    what: 'Writing down your experiences makes appointments much easier. You will not have to remember everything on the spot, and patterns become clearer once they are written down. There is no wrong way to do this.',
+
+    next: [
+      'Keep a running document of examples — focus, sensory, emotional, social',
+      'Include school, work, relationships, and daily life',
+      'Note childhood examples if you remember them',
+      'Ask family members what they remember about you growing up',
+      'Save your notes somewhere you can find them again',
+    ],
+
+    prepare: [
+      'Focus on patterns, not single events',
+      'Include things others find easy that you find hard',
+      'Note how things affect work, relationships, or daily functioning',
+      'If possible, ask a parent or someone who knew you as a child',
+      'Keep examples specific — "I forgot to eat 4 days last week" is more useful than "I forget to eat"',
+      'Save any school reports, work feedback, or old emails that show patterns',
+    ],
+
+    scripts: [
+      { l: 'Asking a family member for childhood examples',
+        t: 'I am trying to understand some patterns I have noticed. Do you remember me struggling with focus, sensory things, or social situations when I was younger? Anything specific you remember would really help me.' },
+      { l: 'Asking a partner for outside perspective',
+        t: 'I am putting together examples of things I find difficult. Could you tell me what you notice — things that seem harder for me than they would be for most people? I want your honest view.' },
+      { l: 'Reflecting on your own experience',
+        t: 'When I think about how I have always functioned, the things that have always been hard are: [list]. The things that have always been easy are: [list]. The patterns I see are: [list].' },
+    ],
+
+    support: [
+      'Use Bowline\'s Brain Dump to get thoughts out without organising them first',
+      'Use TL;DR Assist to process any official letters or referral forms',
+      'Keep all notes in one place — a folder, a doc, or a notes app',
+      'A list of 10-20 specific examples is plenty for an assessment',
+      'Notice what helps too — that is just as useful as what is hard',
+    ],
+
+    links: [
+      { title: 'ADDitude — How to prepare for ADHD assessment',
+        sub: 'Practical guide to documenting symptoms and history',
+        url: 'https://www.additudemag.com/adhd-diagnosis-adults/', icon: 'ti-clipboard-check', color: 'amber' },
+      { title: 'National Autistic Society — Pre-assessment guide',
+        sub: 'What to gather before your appointment',
+        url: 'https://www.autism.org.uk/advice-and-guidance/topics/diagnosis/assessment-and-diagnosis', icon: 'ti-heart', color: 'teal' },
+      { title: 'ADHD UK — Adult symptom checklist',
+        sub: 'A self-screening tool to help organise your thoughts',
+        url: 'https://adhduk.co.uk/symptoms-of-adhd/', icon: 'ti-list-check', color: 'lavender' },
+    ],
+  },
+
+  {
+    k: 'gp', num: 3, color: 'teal', icon: 'ti-stethoscope',
+    l: 'I have spoken to my GP',
+    sub: 'First professional step',
+    what: 'Speaking to your GP is usually the NHS starting point. You can ask for a referral for an assessment. You do not need to prove you are neurodivergent — describing your difficulties and how they affect daily life is enough. If you feel dismissed, you can ask for a second opinion or a different GP.',
+
+    next: [
+      'Ask your GP to refer you to a specialist for ADHD or autism assessment',
+      'Explain how difficulties affect your daily functioning',
+      'Ask about Right to Choose (England only) — this lets you pick the assessment provider',
+      'Note the date of the appointment and who sent the referral',
+      'Ask for a copy of the referral letter',
+    ],
+
+    prepare: [
+      'Bring your written examples to the appointment',
+      'Write down 3 specific things you want to say at the start',
+      'Have a clear sentence ready: "I would like a referral for an assessment"',
+      'Mention any conditions that have been ruled out (anxiety, depression, thyroid)',
+      'Ask for the referral letter to be copied to you',
+      'Take a trusted person with you if it helps',
+      'If the GP is unsure, ask politely to discuss it with a specialist instead',
+    ],
+
+    scripts: [
+      { l: 'Asking for a referral (direct)',
+        t: 'I think I may be neurodivergent. I have been struggling with daily functioning in several areas for many years. I would like to be referred for an assessment.' },
+      { l: 'Asking about Right to Choose (England)',
+        t: 'I understand I may have the right to choose my assessment provider under NHS Right to Choose. Can you include that in my referral and let me know which providers are available?' },
+      { l: 'If the GP seems unsure',
+        t: 'I understand it may not be obvious from this appointment. I have written down specific examples of how this affects my work and daily life. I would like to discuss them with a specialist rather than rule it out at this stage.' },
+      { l: 'Asking for the referral letter',
+        t: 'Could you send me a copy of the referral letter so I have a record? It will help me keep track of the process.' },
+      { l: 'If you feel dismissed',
+        t: 'Thank you for your time. I would like to make another appointment to discuss this further, ideally with a different GP if possible. This is important to me.' },
+    ],
+
+    support: [
+      'Take a trusted person with you if that helps',
+      'Ask for written notes from the appointment',
+      'You can ask for things to be repeated or written down',
+      'Use Bowline\'s TL;DR Assist to process any letters or forms you receive',
+      'Note down what the GP said immediately after — memory fades quickly',
+    ],
+
+    links: [
+      { title: 'NHS — Getting diagnosed with autism',
+        sub: 'Official NHS guidance for adult autism assessment',
+        url: 'https://www.nhs.uk/conditions/autism/getting-diagnosed/diagnosis/', icon: 'ti-heart', color: 'teal' },
+      { title: 'NHS — ADHD diagnosis and referral',
+        sub: 'How the NHS assesses adult ADHD',
+        url: 'https://www.nhs.uk/conditions/attention-deficit-hyperactivity-disorder-adhd/diagnosis/', icon: 'ti-brain', color: 'lavender' },
+      { title: 'NHS Right to Choose (England)',
+        sub: 'Your right to pick your assessment provider',
+        url: 'https://www.england.nhs.uk/contact-us/right-to-choose/', icon: 'ti-arrow-right', color: 'sky' },
+      { title: 'ADHD UK — Right to Choose providers',
+        sub: 'Up-to-date list of NHS-funded providers',
+        url: 'https://adhduk.co.uk/right-to-choose/', icon: 'ti-list', color: 'amber' },
+    ],
+  },
+
+  {
+    k: 'referred', num: 4, color: 'amber', icon: 'ti-send',
+    l: 'My referral has been sent',
+    sub: 'Waiting for it to be accepted',
+    what: 'Your GP has sent the referral. The next step is for the service to accept it and add you to their waiting list. This can take weeks. The service may write to you, or your GP, or both — keep an eye on post and email.',
+
+    next: [
+      'Chase your GP or the service after 4 to 6 weeks if you have not heard',
+      'Ask for written confirmation that the referral has been received',
+      'Keep all letters and reference numbers somewhere safe',
+      'Ask what the expected waiting time is',
+      'Update your contact details with your GP and the service if anything changes',
+    ],
+
+    prepare: [
+      'Note the name of the service your referral was sent to',
+      'Make sure your GP has your current phone number and address',
+      'If you move house, tell both your GP and the service',
+      'Create a folder (physical or digital) for everything related to the assessment',
+      'Save the GP referral letter if you got a copy',
+    ],
+
+    scripts: [
+      { l: 'Chasing the referral after 4-6 weeks',
+        t: 'Hello, I was referred by my GP on [date] for a neurodevelopmental assessment. I have not yet heard whether my referral has been accepted. Could you confirm the status, and let me know what happens next?' },
+      { l: 'Asking about expected timeline',
+        t: 'Can you tell me the approximate waiting time for an assessment, and what I should expect after the referral is accepted?' },
+      { l: 'If the GP says they have not heard back',
+        t: 'Could you re-send the referral, or contact the service directly to check it was received? It has been [X] weeks now.' },
+    ],
+
+    support: [
+      'You do not need to wait for the assessment to start using support strategies',
+      'Use Bowline\'s Today, Reset, and TL;DR tools while you wait',
+      'Keep a folder for all correspondence',
+      'If you can, take some time off chasing every few weeks — it is exhausting',
+    ],
+
+    links: [
+      { title: 'National Autistic Society — Waiting for assessment',
+        sub: 'What to expect during the waiting period',
+        url: 'https://www.autism.org.uk/advice-and-guidance/topics/diagnosis', icon: 'ti-clock', color: 'amber' },
+      { title: 'ADHD UK — Waiting list guidance',
+        sub: 'How to navigate NHS ADHD waiting lists',
+        url: 'https://adhduk.co.uk/nhs-assessment/', icon: 'ti-brain', color: 'lavender' },
+      { title: 'NHS — Patient Advice and Liaison Service (PALS)',
+        sub: 'If you have concerns about your referral or care',
+        url: 'https://www.nhs.uk/nhs-services/hospitals/what-is-pals-patient-advice-and-liaison-service/', icon: 'ti-message-circle', color: 'sky' },
+    ],
+  },
+
+  {
+    k: 'waiting', num: 5, color: 'sky', icon: 'ti-clock',
+    l: 'I am waiting',
+    sub: 'On the waiting list',
+    what: 'Waiting is often the longest part. NHS autism assessments in England can take over a year on average — sometimes much longer. ADHD assessments can also take months to years. The wait does not reflect how serious your needs are. You are not exaggerating; the system is overstretched.',
+
+    next: [
+      'Use Bowline and other strategies now — do not wait for diagnosis',
+      'Keep a record of how difficulties are affecting you, in case the assessor asks',
+      'Ask your GP if any interim support is available (some areas offer pre-diagnostic groups)',
+      'Look into workplace or university adjustments you can ask for now',
+      'Consider joining a peer support community while you wait',
+    ],
+
+    prepare: [
+      'Continue adding to your notes when something significant happens',
+      'Note any major life changes (job, relationship, health)',
+      'If your difficulties become a crisis, speak to your GP — that may escalate the referral',
+      'Save anything that shows the impact on your life (sick days, missed deadlines, feedback)',
+      'Connect with neurodivergent communities online for peer support',
+    ],
+
+    scripts: [
+      { l: 'Asking employer for adjustments while waiting',
+        t: 'I am currently waiting for a neurodevelopmental assessment. While I wait, I would like to discuss some adjustments that may help me work more effectively. I am happy to provide more detail if useful.' },
+      { l: 'Asking GP for interim support',
+        t: 'I am on the waiting list for assessment, but I am really struggling in the meantime. Is there any interim support available — therapy, medication review, or local services I could access now?' },
+      { l: 'Asking university disability team for support',
+        t: 'I am currently undergoing assessment for [condition]. While I wait, I would like to discuss what support and adjustments are available to me. The waiting time is around [X] months.' },
+      { l: 'Reaching out to a friend for support',
+        t: 'I am in the middle of the assessment process and it is taking a long time. I do not need advice, but it would help to talk sometimes about how things are going.' },
+    ],
+
+    support: [
+      'Use Bowline daily — Today, Now, Reset and TL;DR are built for this',
+      'Routine and structure help now, before and after diagnosis',
+      'Contact Mind or a local mental health charity for peer support',
+      'Look into Access to Work (UK) — you can apply without a formal diagnosis',
+      'Many workplaces will offer reasonable adjustments based on self-disclosure alone',
+    ],
+
+    links: [
+      { title: 'Mind — Support while waiting for diagnosis',
+        sub: 'General mental health support during long waits',
+        url: 'https://www.mind.org.uk/information-support/types-of-mental-health-problems/mental-health-problems-introduction/seeking-help/', icon: 'ti-heart', color: 'peach' },
+      { title: 'ADHD UK — While you wait',
+        sub: 'Specific strategies for the ADHD waiting period',
+        url: 'https://adhduk.co.uk/i-am-waiting-for-an-adhd-assessment/', icon: 'ti-brain', color: 'lavender' },
+      { title: 'Access to Work (UK government)',
+        sub: 'Workplace support funding — no diagnosis needed',
+        url: 'https://www.gov.uk/access-to-work', icon: 'ti-briefcase', color: 'sky' },
+      { title: 'Autistic Not Weird — Online community',
+        sub: 'Peer support and writing by autistic adults',
+        url: 'https://autisticnotweird.com', icon: 'ti-users', color: 'teal' },
+    ],
+  },
+
+  {
+    k: 'booked', num: 6, color: 'teal', icon: 'ti-calendar-check',
+    l: 'My assessment is booked',
+    sub: 'Preparing for assessment',
+    what: 'Your appointment is confirmed. The assessment is a conversation — you do not need to perform, prove anything, or impress anyone. Just describe your real experience honestly. Masking during the appointment can hide what they need to see. It is OK to be tired, fidgety, or unsure.',
+
+    next: [
+      'Gather all your written notes and examples',
+      'Plan your journey and what you need to bring',
+      'Plan recovery time after the appointment — it will be tiring',
+      'Write down anything you do not want to forget to mention',
+      'Decide whether to bring a trusted person (if the format allows)',
+    ],
+
+    prepare: [
+      'Review your notes — childhood, school, work, relationships, daily life',
+      'List specific examples of masking if relevant ("I rehearse what to say at meetings")',
+      'Bring or list any school reports, work feedback, or assessments you have',
+      'Decide what you want from the assessment — diagnosis, advice, both?',
+      'Prepare for waiting-room sensory overwhelm — bring headphones, fidget',
+      'Eat and drink water before going — assessments can be 2-3 hours',
+      'Plan something gentle for afterwards',
+    ],
+
+    scripts: [
+      { l: 'Asking about the format in advance',
+        t: 'Could you tell me what to expect from the assessment? How long will it take, what kinds of questions will be asked, and is it OK to bring written notes?' },
+      { l: 'Asking for adjustments at assessment',
+        t: 'I may need some adjustments during the assessment. Could I have breaks if needed, and can questions be repeated or rephrased if I need them to be? I may also want to bring a sensory item.' },
+      { l: 'If asked whether you mask',
+        t: 'Yes, I mask a lot in social and professional situations. What you may see in this appointment may not reflect how I function day to day. I have tried to come as myself, but it is hard to turn off.' },
+      { l: 'If you do not know an answer',
+        t: 'I am not sure how to answer that. Can you rephrase, or can I think about it for a moment? I do not want to give the wrong answer just to give one.' },
+      { l: 'If the assessor moves too fast',
+        t: 'Could we slow down a little? I am processing what you are saying and want to make sure I answer accurately.' },
+    ],
+
+    support: [
+      'Tell the assessor about your sensory needs at the start',
+      'You can take notes during, or ask for things to be written down',
+      'It is OK to fidget, look away, or take breaks',
+      'Plan calming sensory input for after — quiet, headphones, comfort food',
+      'Do not schedule anything demanding for the rest of that day',
+    ],
+
+    links: [
+      { title: 'NAS — What to expect at an autism assessment',
+        sub: 'Detailed overview of the assessment process',
+        url: 'https://www.autism.org.uk/advice-and-guidance/topics/diagnosis/assessment-and-diagnosis/adults', icon: 'ti-clipboard-check', color: 'teal' },
+      { title: 'ADDitude — Preparing for ADHD assessment',
+        sub: 'What questions to expect and how to prepare',
+        url: 'https://www.additudemag.com/adhd-testing-diagnosis/', icon: 'ti-brain', color: 'lavender' },
+      { title: 'ADHD UK — Assessment day guide',
+        sub: 'Practical tips for the day of your appointment',
+        url: 'https://adhduk.co.uk/getting-an-adhd-diagnosis/', icon: 'ti-list-check', color: 'amber' },
+    ],
+  },
+
+  {
+    k: 'assessed', num: 7, color: 'lavender', icon: 'ti-clipboard-check',
+    l: 'I have had my assessment',
+    sub: 'Waiting for the outcome',
+    what: 'The assessment has happened. You may now be waiting for the formal written report. This can take days, weeks, or sometimes months depending on the service. The waiting after is its own kind of difficult — you may feel exposed, doubtful, or impatient. All of that is normal.',
+
+    next: [
+      'Ask how long the written report will take',
+      'Get the name and contact of the assessor or service',
+      'Ask what happens next — will they contact you, or do you contact them?',
+      'Note anything the assessor said verbally that you want to remember',
+    ],
+
+    prepare: [
+      'Think about who you want to tell, and when',
+      'Think about what you want from the outcome — practical support, identity clarity, both?',
+      'Consider what support you would like immediately if diagnosed',
+      'Give yourself permission to feel everything — relief, doubt, exhaustion, all of it',
+    ],
+
+    scripts: [
+      { l: 'Asking about the timeline for the report',
+        t: 'Could you tell me how long the written report will take, and how I will receive it? Will it come by post, email, or both?' },
+      { l: 'Following up if you have not heard',
+        t: 'Hello, I had my assessment on [date]. I have not yet received my report. Could you give me an update on when to expect it?' },
+      { l: 'Telling someone close that you have had the assessment',
+        t: 'I had my assessment yesterday. I am still processing it. The outcome will come in a few weeks. I do not need to talk about it in detail yet, but I wanted you to know.' },
+    ],
+
+    support: [
+      'The waiting after assessment can feel exposing — be gentle with yourself',
+      'Use Bowline\'s Reset tools if you feel anxious or doubtful',
+      'Talk to someone you trust about how you are feeling',
+      'Do not push yourself to make any big decisions until the report comes',
+      'Sleep and food matter more than usual right now',
+    ],
+
+    links: [
+      { title: 'Mind — Processing health appointments',
+        sub: 'General mental health support after difficult appointments',
+        url: 'https://www.mind.org.uk', icon: 'ti-heart', color: 'peach' },
+      { title: 'NAS — Post-assessment information',
+        sub: 'What happens between assessment and report',
+        url: 'https://www.autism.org.uk/advice-and-guidance/topics/diagnosis', icon: 'ti-clock', color: 'teal' },
+    ],
+  },
+
+  {
+    k: 'result', num: 8, color: 'peach', icon: 'ti-file-description',
+    l: 'I have my result',
+    sub: 'Processing the outcome',
+    what: 'You have received your outcome. Whether you were diagnosed or not, this can bring up a lot. Relief, sadness, anger, grief for the version of you who did not know — all of it is normal. There is no right way to feel. Take your time.',
+
+    next: [
+      'Read the report when you feel ready — not all at once if needed',
+      'Keep your report safe — you may need it for work, university, benefits, future care',
+      'Decide who you want to share it with, if anyone',
+      'Ask about next steps — medication, therapy, support groups, follow-up',
+      'Give yourself weeks or months to process — there is no rush',
+    ],
+
+    prepare: [
+      'If diagnosed — ask about local support services',
+      'If not diagnosed — ask what the report recommends, and whether reassessment is advised',
+      'Ask if any conditions were ruled out that you might want to follow up on',
+      'Keep a copy of the report in at least two safe places (digital + physical)',
+      'Note any practical next steps the report recommends',
+    ],
+
+    scripts: [
+      { l: 'Asking about next steps after diagnosis',
+        t: 'Now that I have a diagnosis, what support is available to me? Are there local services, support groups, or NHS follow-ups I should know about?' },
+      { l: 'If you did not receive a diagnosis',
+        t: 'I did not receive a diagnosis, but I still struggle with these things. What do you recommend I do next? Are there other conditions I should explore, or could I be reassessed in future?' },
+      { l: 'Telling your employer (formal)',
+        t: 'I am writing to let you know I have recently received a diagnosis of [condition]. I would like to arrange a meeting to discuss what reasonable adjustments might help me in my role.' },
+      { l: 'Telling your employer (informal)',
+        t: 'I wanted to share something with you. I have been recently diagnosed with [condition]. I am still working out what it means for me, but I wanted you to know in case it is useful context.' },
+      { l: 'Telling a partner or close family',
+        t: 'I have just received my diagnosis. I am still processing it. I wanted to tell you because it explains a lot about how I experience things. I do not need answers, just understanding right now.' },
+      { l: 'Telling a friend',
+        t: 'I had an assessment and got a diagnosis of [condition]. I am still figuring out what to do with it. Mostly I just wanted to tell you, because you are someone I trust.' },
+    ],
+
+    support: [
+      'Processing a diagnosis can take weeks or months — there is no right speed',
+      'A diagnosis does not change who you are — it explains some of your experience',
+      'Peer support communities can be a lifeline — people who understand from the inside',
+      'You may want to revisit your past with new context. That can be intense. Take it slowly',
+      'Therapy with a neurodiversity-affirming professional can help with processing',
+      'You do not have to tell anyone unless and until you want to',
+    ],
+
+    links: [
+      { title: 'Autistic UK — After diagnosis',
+        sub: 'Resources for newly-diagnosed autistic adults',
+        url: 'https://autisticuk.org', icon: 'ti-heart', color: 'teal' },
+      { title: 'ADHD UK — Newly diagnosed',
+        sub: 'What to do after an adult ADHD diagnosis',
+        url: 'https://adhduk.co.uk/newly-diagnosed-with-adhd/', icon: 'ti-brain', color: 'lavender' },
+      { title: 'NAS — After your diagnosis',
+        sub: 'Official guidance from the National Autistic Society',
+        url: 'https://www.autism.org.uk/advice-and-guidance/topics/diagnosis/after-your-diagnosis', icon: 'ti-arrow-right', color: 'sky' },
+      { title: 'Neurodiversity Hub — Workplace disclosure',
+        sub: 'Should you tell your employer? When and how?',
+        url: 'https://www.neurodiversityhub.org', icon: 'ti-briefcase', color: 'amber' },
+      { title: 'Access to Work (UK)',
+        sub: 'Government funding for workplace adjustments',
+        url: 'https://www.gov.uk/access-to-work', icon: 'ti-coin', color: 'teal' },
+    ],
+  },
+
+  {
+    k: 'support', num: 9, color: 'teal', icon: 'ti-lifebuoy',
+    l: 'I need support now',
+    sub: 'Support does not wait for diagnosis',
+    what: 'Wherever you are in the process — pre-referral, waiting, just diagnosed, or years past — your needs are real now. You do not need a diagnosis to deserve support, ask for adjustments, or use strategies that help.',
+
+    next: [
+      'Use Bowline every day — Today, Now, Reset, and TL;DR are built for your needs',
+      'Ask your employer or school about adjustments',
+      'Contact your GP if difficulties are affecting your mental health',
+      'Find a peer support community',
+      'Consider therapy with a neurodiversity-affirming practitioner',
+    ],
+
+    prepare: [
+      'You do not need to justify your needs — they are real regardless of a label',
+      'Write down what helps and what does not — this is your evidence',
+      'Identify your most pressing need right now and start there',
+      'Look at what is sustainable, not just what is ideal',
+    ],
+
+    scripts: [
+      { l: 'Asking for workplace adjustments',
+        t: 'I am experiencing some difficulties with [focus / sensory environment / unclear instructions] that affect my work. I would like to discuss some adjustments that could help. I am happy to share more detail if useful.' },
+      { l: 'Asking for university support',
+        t: 'I am struggling with aspects of university life. I would like to speak to the disability or wellbeing team about what support is available, with or without a formal diagnosis. Could you point me in the right direction?' },
+      { l: 'Asking GP for mental health support',
+        t: 'My mental health is being affected by difficulties I am having with daily functioning. I would like to discuss what support is available to me right now.' },
+      { l: 'Talking to someone you trust about struggling',
+        t: 'I have been finding things really hard lately. I do not always have the right words, but I wanted to let you know I am struggling. I am not asking you to fix it.' },
+      { l: 'Saying no to a demand',
+        t: 'Thank you for asking. Right now I am not able to take this on. I will let you know if that changes.' },
+      { l: 'Asking for accommodation in a healthcare setting',
+        t: 'I find waiting rooms and unfamiliar environments difficult. Could I wait somewhere quieter, or be given a clearer idea of when I will be seen? It would really help.' },
+    ],
+
+    support: [
+      'Routines, reminders, and structure help everyone — diagnosis or not',
+      'Sensory tools (headphones, weighted blanket, fidget) are valid without a label',
+      'Breaking tasks into steps reduces executive function load immediately',
+      'You are allowed to rest, reduce demands, and ask for help',
+      'Crisis lines do not require a diagnosis — they are for anyone struggling',
+    ],
+
+    links: [
+      { title: 'Mind — Crisis support',
+        sub: 'UK mental health support and crisis resources',
+        url: 'https://www.mind.org.uk/need-urgent-help/', icon: 'ti-heart', color: 'peach' },
+      { title: 'Samaritans — 24/7 listening',
+        sub: 'Free phone line: 116 123',
+        url: 'https://www.samaritans.org', icon: 'ti-phone', color: 'sky' },
+      { title: 'Shout crisis text line',
+        sub: 'Text HOME to 85258 (UK) — free, 24/7',
+        url: 'https://giveusashout.org', icon: 'ti-message-circle', color: 'lavender' },
+      { title: 'Scope — Disability rights and adjustments',
+        sub: 'Help with disability and work adjustments',
+        url: 'https://www.scope.org.uk', icon: 'ti-briefcase', color: 'sky' },
+      { title: 'NHS — Urgent mental health help',
+        sub: 'How to get urgent mental health support',
+        url: 'https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/behaviours/help-for-suicidal-thoughts/', icon: 'ti-first-aid-kit', color: 'teal' },
+    ],
+  },
+
+  {
+    k: 'titration', num: 10, color: 'sky', icon: 'ti-adjustments',
+    l: 'I am starting titration',
+    sub: 'Finding your medication and dose',
+    what: 'Titration is the process of finding the right medication and the right dose for you. It is not a single appointment — it is a series of small steps over weeks or months. You start on a low dose, see how your body and brain respond, then adjust upwards (or sideways to a different medication) until you find what works. The goal is not the highest dose you can tolerate. The goal is the lowest dose that gives you the benefit you need with side effects you can live with. Some people land on their first medication. Others try two or three. Both are normal. Titration takes patience, and your honest feedback is the most important data your prescriber has.',
+
+    next: [
+      'You will start on a low dose of one medication',
+      'You will be reviewed regularly — usually every 2 to 6 weeks at first',
+      'At each review, the dose may go up, stay the same, or change to a different medication',
+      'You will keep going until you and your prescriber agree you have found the right dose',
+      'Once stable, reviews drop to every 6 to 12 months',
+      'Titration usually takes 2 to 6 months — sometimes longer',
+    ],
+
+    prepare: [
+      'Ask your prescriber which medication you are starting and why',
+      'Ask what side effects to watch for in the first 2 weeks',
+      'Ask what counts as a reason to call before your next review',
+      'Set up a simple daily log — dose, time taken, sleep, appetite, mood, focus',
+      'Plan how you will collect prescriptions (Schedule 2 stimulants cannot be repeat-prescribed)',
+      'Know which pharmacy stocks your medication — stimulants can be hard to find',
+      'Tell someone close to you that you are starting — they may notice changes you miss',
+      'Have a baseline blood pressure and heart rate reading if your prescriber asks',
+      'Plan reviews around work or life events where possible — do not start a new dose before a big presentation',
+    ],
+
+    scripts: [
+      { l: 'At your first titration appointment',
+        t: 'Before we start, can you tell me what to expect over the next few months? What is the usual starting dose, how often will we review, and what should I do if I have side effects between appointments?' },
+      { l: 'Logging honestly — what to tell your prescriber',
+        t: 'Since my last review: the medication helps with [focus / impulsivity / overwhelm] for about [X] hours. The side effects I have noticed are [appetite / sleep / mood / heart rate]. On a scale of 1 to 10, the benefit is [X] and the side effects are [X]. I would like to [stay on this dose / try a higher dose / try something different].' },
+      { l: 'If a dose is not working',
+        t: 'I have been on [dose] for [X] weeks now. I am not noticing much benefit, and the side effects are [list]. I would like to discuss either increasing the dose or trying a different medication.' },
+      { l: 'If side effects are difficult',
+        t: 'I am experiencing [specific side effect] and it is affecting [sleep / eating / mood / work]. It started [when] and it is [getting better / staying the same / getting worse]. I would like to talk about what to do.' },
+      { l: 'If you cannot get hold of your medication',
+        t: 'I have been unable to fill my prescription at [pharmacy]. They do not have stock and have not been able to tell me when they will. Can you help me find an alternative pharmacy, or discuss a temporary alternative?' },
+      { l: 'Asking about Shared Care (UK)',
+        t: 'Now that I am stable on this dose, can we discuss moving to a Shared Care agreement with my GP? I understand this means my GP would take over prescribing while you remain the specialist overseeing my treatment.' },
+      { l: 'If you want to pause or stop',
+        t: 'I would like to discuss pausing or stopping my medication. The reasons are [list]. I understand I should not stop without guidance — can we talk about how to do this safely?' },
+    ],
+
+    support: [
+      'Use Bowline\'s Today and Now to track how each dose actually feels day to day',
+      'Take your medication at the same time every day — set a reminder',
+      'Eat something before stimulants, even if appetite is low — bananas, smoothies, toast',
+      'Drink water through the day — stimulants are mildly dehydrating',
+      'Sleep is the first thing affected — protect it, and tell your prescriber if it suffers',
+      'Do not judge the medication on day one or day two — give each dose at least a week',
+      'Honest feedback at reviews is more important than sounding "fine"',
+      'Side effects often settle in the first 1 to 2 weeks — but tell your prescriber anyway',
+      'Keep a list of any other medications, supplements, or recreational substances — interactions matter',
+      'You can stop or change medication at any point. This is your choice, made with your prescriber.',
+    ],
+
+    links: [
+      { title: 'NICE — ADHD medication guidance',
+        sub: 'Official UK clinical guidelines for ADHD prescribing',
+        url: 'https://www.nice.org.uk/guidance/ng87/chapter/Recommendations#medication', icon: 'ti-clipboard-check', color: 'teal' },
+      { title: 'ADHD UK — Medication overview',
+        sub: 'Plain-language guide to the ADHD medications used in the UK',
+        url: 'https://adhduk.co.uk/adhd-medication/', icon: 'ti-pill', color: 'lavender' },
+      { title: 'ADDitude — Titration explained',
+        sub: 'What to expect during the dose-finding process',
+        url: 'https://www.additudemag.com/adhd-medication-titration-process/', icon: 'ti-adjustments', color: 'sky' },
+      { title: 'ADHD UK — Shared Care agreements',
+        sub: 'Moving prescribing from specialist to GP once stable',
+        url: 'https://adhduk.co.uk/shared-care/', icon: 'ti-users', color: 'amber' },
+      { title: 'NHS — Methylphenidate',
+        sub: 'Official NHS medicine information',
+        url: 'https://www.nhs.uk/medicines/methylphenidate-adults/', icon: 'ti-info-circle', color: 'teal' },
+      { title: 'NHS — Lisdexamfetamine (Elvanse)',
+        sub: 'Official NHS medicine information',
+        url: 'https://www.nhs.uk/medicines/lisdexamfetamine/', icon: 'ti-info-circle', color: 'teal' },
+      { title: 'NHS — Atomoxetine',
+        sub: 'Non-stimulant ADHD medication information',
+        url: 'https://www.nhs.uk/medicines/atomoxetine/', icon: 'ti-info-circle', color: 'teal' },
+      { title: 'NHS — Guanfacine',
+        sub: 'Non-stimulant ADHD medication information',
+        url: 'https://www.nhs.uk/medicines/guanfacine/', icon: 'ti-info-circle', color: 'teal' },
+    ],
+  },
 ];
 
-const STUCK_RESPONSES = {
-  start: {
-    title: 'Show only the first step',
-    color: 'teal',
-    body: 'First step: just open the thing. Nothing else yet. Do not read it. Do not plan. Just open it.',
-    actions: [
-      { l: 'Make this smaller',      cls: 'lavender',  go: 'smaller' },
-      { l: 'Start a 3-minute timer', cls: 'sky',       go: 'timer', mins: 3 },
-      { l: 'Body double with me',    cls: 'amber-btn', go: 'bodyDouble' },
-    ],
-  },
-  big: {
-    title: 'Break this into smaller parts',
-    color: 'lavender',
-    body: 'A big task is usually 5 to 10 small steps wearing a costume. Let us get the costume off.',
-    actions: [
-      { l: 'Break it down with AI',   cls: 'primary',  go: 'aiSteps' },
-      { l: 'Just make it smaller',    cls: 'lavender', go: 'smaller' },
-    ],
-  },
-  steps: {
-    title: 'Only the first step matters',
-    color: 'lavender',
-    body: 'The middle steps will still exist after you do step one. Forget the rest. What is step one?',
-    actions: [
-      { l: 'Get step one with AI',     cls: 'primary',   go: 'aiSteps' },
-      { l: 'Body double on step one',  cls: 'amber-btn', go: 'bodyDouble' },
-    ],
-  },
-  boring: {
-    title: 'Try pairing it with something easier',
-    color: 'amber',
-    body: 'Boring tasks need help getting started. Try music, a drink, a short timer, or body doubling.',
-    actions: [
-      { l: 'Start a 5-min timer', cls: 'amber-btn', go: 'timer', mins: 5 },
-      { l: 'Body double',         cls: 'sky',       go: 'bodyDouble' },
-    ],
-  },
-  anxious: {
-    title: 'Pause before action',
-    color: 'amber',
-    body: 'Anxiety adds noise. A reset takes 3 to 5 minutes. The task will still be here.',
-    actions: [
-      { l: 'Open anxiety reset', cls: 'amber-btn', goReset: 'anxiety' },
-      { l: 'Make this smaller',  cls: 'lavender',  go: 'smaller' },
-    ],
-  },
-  over: {
-    title: 'Reduce input first',
-    color: 'peach',
-    body: 'You cannot think clearly when your senses are full. Sensory reset comes first.',
-    actions: [
-      { l: 'Open sensory reset', cls: 'peach',   goReset: 'over' },
-      { l: 'Come back later',    cls: 'sky',     go: 'snooze' },
-    ],
-  },
-  tired: {
-    title: 'Rest is valid',
-    color: 'sky',
-    body: 'Tired brains cannot push through. They can only do less. What is the smallest version of this task?',
-    actions: [
-      { l: 'Make this much smaller', cls: 'lavender', go: 'smaller' },
-      { l: 'Move it to tomorrow',    cls: 'sky',      go: 'snooze' },
-      { l: 'Open shutdown reset',    cls: 'primary',  goReset: 'shutdown' },
-    ],
-  },
-  forget: {
-    title: 'It matters because future-you needs it done',
-    color: 'lavender',
-    body: 'Not because you have to be productive. Not because anyone is watching. Just to reduce pressure on tomorrow-you.',
-    actions: [
-      { l: 'OK, I can start',  cls: 'primary',  go: 'back' },
-      { l: 'Make it smaller',  cls: 'lavender', go: 'smaller' },
-    ],
-  },
-  unclear: {
-    title: 'You only need to understand enough to start',
-    color: 'sky',
-    body: 'If this is a message, use TL;DR to extract the key point. If it is a task, AI can break it down.',
-    actions: [
-      { l: 'Open TL;DR Assist',     cls: 'sky',     goNav: 'tldr' },
-      { l: 'Break it down with AI', cls: 'primary', go: 'aiSteps' },
-    ],
-  },
-  change: {
-    title: 'Something changed. That is allowed.',
-    color: 'amber',
-    body: 'Change of plan is information, not failure. A reset for change-of-plan can help, or just do less.',
-    actions: [
-      { l: 'Open change-of-plan reset', cls: 'amber-btn', goReset: 'change' },
-      { l: 'Just do a smaller version', cls: 'lavender',  go: 'smaller' },
-    ],
-  },
+const LINK_BG = {
+  lavender: 'var(--lavender-l)', teal: 'var(--teal-l)',
+  sky: 'var(--sky-l)', peach: 'var(--peach-l)', amber: 'var(--amber-l)',
+};
+const LINK_IC = {
+  lavender: 'var(--lavender)', teal: 'var(--teal)',
+  sky: 'var(--sky)', peach: 'var(--peach)', amber: 'var(--amber)',
 };
 
-const SMALLER_OPTIONS = [
-  { l: 'Just open it. Do not do it yet.',     meta: '30 seconds' },
-  { l: 'Set a 3-minute timer. Stop when done.', meta: '3 minutes', mins: 3 },
-  { l: 'Do one tenth of it. Then stop.',      meta: 'Whatever counts as a bit' },
-  { l: 'Read or look at it. Do not act yet.', meta: 'Just gather information' },
-  { l: 'Tell someone you are doing it.',      meta: 'Body double via text' },
-  { l: 'Do the boring prep only.',            meta: 'Set up the environment' },
-];
+// ─── Main render ──────────────────────────────────────────
+export function renderDiagnosis() {
+  setTopbar('Journey', 'Where are you in the process?');
 
-// ─── Titration tracker definitions ──────────────────────
-const SIDE_EFFECTS = [
-  { k: 'appetite',    l: 'Appetite ↓',     icon: 'ti-bowl' },
-  { k: 'sleep',       l: 'Sleep affected', icon: 'ti-zzz' },
-  { k: 'headache',    l: 'Headache',       icon: 'ti-mood-puzzled' },
-  { k: 'jitters',     l: 'Jitters',        icon: 'ti-activity' },
-  { k: 'dryMouth',    l: 'Dry mouth',      icon: 'ti-droplet-off' },
-  { k: 'moodDip',     l: 'Mood dip',       icon: 'ti-mood-sad' },
-  { k: 'heartRacing', l: 'Heart racing',   icon: 'ti-heart-rate-monitor' },
-  { k: 'nausea',      l: 'Nausea',         icon: 'ti-stomach' },
-];
-
-const SEVERITY = [
-  { k: 'none',     l: 'None',     color: '#9aa39c' },
-  { k: 'mild',     l: 'Mild',     color: '#7fb89a' },
-  { k: 'moderate', l: 'Moderate', color: '#e0a96d' },
-  { k: 'severe',   l: 'Severe',   color: '#d97a7a' },
-];
-
-const TITRATION_MOODS = [
-  { k: 1, l: 'Awful',  icon: 'ti-mood-sad' },
-  { k: 2, l: 'Low',    icon: 'ti-mood-empty' },
-  { k: 3, l: 'OK',     icon: 'ti-mood-neutral' },
-  { k: 4, l: 'Good',   icon: 'ti-mood-smile' },
-  { k: 5, l: 'Great',  icon: 'ti-mood-happy' },
-];
-
-// ─── Main router ──────────────────────────────────────────
-export function renderNow() {
-  setTopbar('Now', 'What do I do next?');
-
-  switch (state.nowView) {
-    case 'stuck':            return renderStuck();
-    case 'stuckResponse':    return renderStuckResponse();
-    case 'smaller':          return renderSmaller();
-    case 'bodyDouble':       return renderBodyDouble();
-    case 'timerSetup':       return renderTimerSetup();
-    case 'timer':            return renderTimerActive();
-    case 'timerEnd':         return renderTimerEnd();
-    case 'aiSteps':          return renderAiSteps();
-    case 'titration':        return renderTitrationHub();
-    case 'titrationLog':     return renderTitrationLog();
-    case 'titrationHistory': return renderTitrationHistory();
-    case 'titrationChart':   return renderTitrationChart();
-    case 'titrationExport':  return renderTitrationExport();
-    default:                 return renderMain();
-  }
+  if (state.diagnosisStage) return renderStage();
+  renderStageList();
 }
 
-// ─── Main view ────────────────────────────────────────────
-function renderMain() {
-  const undone = state.tasks.filter(t => !t.done);
-  const cur    = undone[0];
+// ─── Stage list view ─────────────────────────────────────
+function renderStageList() {
+  const savedKey = state.diagnosisStageKey;
+  const completedStages = Object.keys(state.diagnosisChecked).filter(k => {
+    const arr = state.diagnosisChecked[k];
+    const stage = STAGES.find(s => s.k === k);
+    return stage && arr && arr.filter(Boolean).length === stage.prepare.length;
+  });
+  const progressPct = (completedStages.length / STAGES.length) * 100;
 
-  if (!cur) {
-    document.getElementById('content').innerHTML = `
-      <div class="screen">
-        <div class="notice green" style="text-align:center;padding:1.5rem">
-          <div style="font-size:18px;font-weight:700;margin-bottom:8px">All done for now.</div>
-          <div>Rest is valid. A smaller day still counts.</div>
-        </div>
-        <button class="btn primary" onclick="go('today')"><i class="ti ti-sun"></i> Back to Today</button>
-        <button class="btn" onclick="go('plan')"><i class="ti ti-plus"></i> Add something</button>
-        <button class="btn sky" onclick="go('reset')"><i class="ti ti-refresh"></i> Take a recovery moment</button>
-        <button class="btn lavender" onclick="nowSetView('titration')"><i class="ti ti-pill"></i> Titration log</button>
-      </div>`;
-    return;
-  }
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="card teal">
-        <div class="card-label">Your next step</div>
-        <div class="card-main">${cur.text}</div>
-        <div class="card-sub">${cur.meta}</div>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-          <span class="tag green"><i class="ti ti-bolt" style="font-size:12px"></i> Low energy</span>
-          <span class="tag amber"><i class="ti ti-clock" style="font-size:12px"></i> 5 min</span>
-        </div>
-      </div>
-
-      <button class="btn primary" onclick="nowDone(${cur.id})">
-        <i class="ti ti-check"></i> Done
-      </button>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <button class="btn lavender" style="margin:0" onclick="nowSetView('stuck')">
-          <i class="ti ti-help"></i> I am stuck
-        </button>
-        <button class="btn sky" style="margin:0" onclick="nowSetView('smaller')">
-          <i class="ti ti-arrows-minimize"></i> Make smaller
-        </button>
-        <button class="btn" style="margin:0" onclick="nowSetView('bodyDouble')">
-          <i class="ti ti-users"></i> Body double
-        </button>
-        <button class="btn" style="margin:0" onclick="nowSetView('timerSetup')">
-          <i class="ti ti-clock"></i> Timer
-        </button>
-      </div>
-
-      <button class="btn amber-btn" onclick="nowSnooze(${cur.id})">
-        <i class="ti ti-clock-pause"></i> Snooze · do this later
-      </button>
-      <button class="btn" onclick="nowSwap(${cur.id})">
-        <i class="ti ti-arrows-shuffle"></i> Swap to next task
-      </button>
-      <button class="btn peach" onclick="go('reset')">
-        <i class="ti ti-refresh"></i> I need a reset first
-      </button>
-
-      <!-- Titration tracker entry point -->
-      <button class="btn lavender" onclick="nowSetView('titration')">
-        <i class="ti ti-pill"></i> Titration log${state.titrationEntries.length > 0 ? ` · ${state.titrationEntries.length} entries` : ''}
-      </button>
-
-      <div class="section-label">Next up</div>
-      <div class="card" style="padding:0.5rem 1.25rem">
-        ${undone.slice(1, 3).map(t => `
-          <div class="task-row">
-            <div style="flex:1">
-              <div class="task-text" style="font-size:14px">${t.text}</div>
-              <div class="task-meta">${t.meta}</div>
-            </div>
-            <span style="width:6px;height:6px;border-radius:50%;background:${ACCENT[t.color] || '#888780'};margin-top:8px;flex-shrink:0"></span>
-          </div>
-        `).join('') || `
-          <div class="task-row">
-            <div class="task-text" style="color:var(--text-muted);font-size:14px">Nothing else queued.</div>
-          </div>`}
-      </div>
-    </div>`;
-}
-
-// ─── Stuck picker ─────────────────────────────────────────
-function renderStuck() {
   document.getElementById('content').innerHTML = `
     <div class="screen">
       <div class="notice purple">
-        <strong>Stuck is information.</strong><br>
-        It tells us something about the task, not about you. What is making this hard?
-      </div>
-      ${STUCK_OPTIONS.map(o => `
-        <button class="btn" onclick="nowPickStuck('${o.k}')">
-          <i class="ti ${o.icon}"></i>${o.l}
-        </button>
-      `).join('')}
-      <button class="btn" style="margin-top:8px;color:var(--text-muted)" onclick="nowSetView('main')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-    </div>`;
-}
-
-// ─── Stuck response ───────────────────────────────────────
-function renderStuckResponse() {
-  const r = STUCK_RESPONSES[state.nowStuckReason];
-  if (!r) { state.nowView = 'stuck'; renderNow(); return; }
-
-  const colorClass = r.color === 'lavender' ? 'lavender' :
-                     r.color === 'sky' ? 'sky' :
-                     r.color === 'amber' ? 'amber' :
-                     r.color === 'peach' ? 'peach' : 'teal';
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="card ${colorClass}">
-        <div class="card-label">${r.title}</div>
-        <div style="font-size:15px;line-height:1.6;margin-top:8px">${r.body}</div>
+        <strong>You do not need to wait for a diagnosis to deserve support.</strong><br>
+        Your needs are real now. Tap where you are to see what to do next.
       </div>
 
-      ${r.actions.map(a => {
-        if (a.goReset) {
-          return `<button class="btn ${a.cls}" onclick="nowOpenReset('${a.goReset}')">${a.l}</button>`;
-        }
-        if (a.goNav) {
-          return `<button class="btn ${a.cls}" onclick="go('${a.goNav}')">${a.l}</button>`;
-        }
-        if (a.go === 'snooze') {
-          return `<button class="btn ${a.cls}" onclick="nowSnoozeCurrent()">${a.l}</button>`;
-        }
-        if (a.go === 'back') {
-          return `<button class="btn ${a.cls}" onclick="nowSetView('main')">${a.l}</button>`;
-        }
-        if (a.go === 'timer') {
-          return `<button class="btn ${a.cls}" onclick="nowStartTimer(${a.mins})">${a.l}</button>`;
-        }
-        return `<button class="btn ${a.cls}" onclick="nowSetView('${a.go}')">${a.l}</button>`;
-      }).join('')}
-
-      <button class="btn" style="margin-top:8px;color:var(--text-muted)" onclick="state.nowStuckReason=null;nowSetView('stuck')">
-        <i class="ti ti-arrow-left"></i> Different reason
-      </button>
-    </div>`;
-}
-
-// ─── Make smaller ─────────────────────────────────────────
-function renderSmaller() {
-  const undone = state.tasks.filter(t => !t.done);
-  const cur    = undone[0];
-  if (!cur) { state.nowView = 'main'; renderNow(); return; }
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="card teal">
-        <div class="card-label">Original task</div>
-        <div class="card-main" style="font-size:16px">${cur.text}</div>
-      </div>
-      <div class="notice green">
-        A smaller version still counts. Pick one. You can always do more later.
-      </div>
-      ${SMALLER_OPTIONS.map((o, i) => `
-        <button class="btn" onclick="${o.mins ? `nowStartTimer(${o.mins})` : `nowApplySmaller(${i})`}">
-          <div style="flex:1">
-            <div>${o.l}</div>
-            <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px">${o.meta}</div>
+      ${completedStages.length > 0 ? `
+        <div class="card teal">
+          <div class="card-label">Your progress</div>
+          <div class="card-main" style="font-size:16px">${completedStages.length} of ${STAGES.length} stages with completed prep</div>
+          <div class="progress-bar" style="margin-top:12px;margin-bottom:0">
+            <div class="progress-fill" style="width:${progressPct}%"></div>
           </div>
-        </button>
-      `).join('')}
-      <button class="btn" style="margin-top:8px;color:var(--text-muted)" onclick="nowSetView('main')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-    </div>`;
-}
-
-// ─── Body double picker ──────────────────────────────────
-function renderBodyDouble() {
-  const times = [3, 5, 10, 15, 25];
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="notice blue">
-        <strong>Body doubling.</strong><br>
-        Work alongside the app for a set time. Done is not required. Starting counts.
-      </div>
-      <div class="section-label">Choose a length</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">
-        ${times.map(t => `
-          <button class="mood-btn" onclick="nowStartTimer(${t})">${t} min</button>
-        `).join('')}
-      </div>
-      <div class="notice green">
-        Stay with the first step. Starting counts. You can go slowly. Notice distractions and return gently.
-      </div>
-      <button class="btn" style="margin-top:14px;color:var(--text-muted)" onclick="nowSetView('main')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-    </div>`;
-}
-
-// ─── Timer setup ─────────────────────────────────────────
-function renderTimerSetup() {
-  const times = [
-    { m: 2,  l: 'Just begin',     sub: '2 min' },
-    { m: 3,  l: 'Tiny step',      sub: '3 min' },
-    { m: 5,  l: 'Short burst',    sub: '5 min' },
-    { m: 10, l: 'Focused chunk',  sub: '10 min' },
-    { m: 25, l: 'Pomodoro',       sub: '25 min' },
-  ];
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="notice blue">
-        <strong>Timer.</strong><br>
-        A short, contained burst. When the timer ends, you can stop, continue, or run another.
-      </div>
-      ${times.map(t => `
-        <button class="btn" onclick="nowStartTimer(${t.m})">
-          <i class="ti ti-clock" style="color:var(--teal)"></i>
-          <div style="flex:1">
-            <div>${t.l}</div>
-            <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px">${t.sub}</div>
-          </div>
-        </button>
-      `).join('')}
-      <button class="btn" style="margin-top:8px;color:var(--text-muted)" onclick="nowSetView('main')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-    </div>`;
-}
-
-// ─── Timer active ────────────────────────────────────────
-function renderTimerActive() {
-  if (!state.nowTimerEnd || state.nowTimerEnd <= Date.now()) {
-    state.nowView = 'timerEnd';
-    renderNow();
-    return;
-  }
-
-  const remainingMs = state.nowTimerEnd - Date.now();
-  const totalMs     = state.nowTimerMins * 60 * 1000;
-  const pct         = Math.max(0, Math.min(100, ((totalMs - remainingMs) / totalMs) * 100));
-  const mins        = Math.floor(remainingMs / 60000);
-  const secs        = Math.floor((remainingMs % 60000) / 1000);
-  const timeStr     = mins + ':' + String(secs).padStart(2, '0');
-
-  const undone = state.tasks.filter(t => !t.done);
-  const cur    = undone[0];
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="card teal">
-        <div class="card-label">Timer · ${state.nowTimerMins} min</div>
-        <div class="card-main" style="font-size:16px">${cur ? cur.text : 'Stay with the task.'}</div>
-      </div>
-
-      <div style="text-align:center;padding:1.5rem 0">
-        <div style="font-size:48px;font-weight:700;color:var(--teal-deep);letter-spacing:-1px;font-variant-numeric:tabular-nums">${timeStr}</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">stay with it</div>
-      </div>
-
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-
-      <div class="notice blue">
-        Starting counts. You can go slowly. Done is not required.
-      </div>
-
-      <button class="btn primary" onclick="nowFinishTimerEarly()">
-        <i class="ti ti-flag-check"></i> I am done — finish early
-      </button>
-      <button class="btn" onclick="nowCancelTimer()">
-        <i class="ti ti-x"></i> Stop session
-      </button>
-    </div>`;
-
-  // Tick the timer
-  setTimeout(() => {
-    if (state.screen === 'now' && state.nowView === 'timer') renderNow();
-  }, 1000);
-}
-
-// ─── Timer end ───────────────────────────────────────────
-function renderTimerEnd() {
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="notice green" style="text-align:center;padding:1.5rem">
-        <i class="ti ti-circle-check" style="font-size:32px;color:var(--teal);display:block;margin-bottom:8px"></i>
-        <div style="font-size:18px;font-weight:700;margin-bottom:6px">Session complete.</div>
-        <div>What happened?</div>
-      </div>
-      <button class="btn primary" onclick="nowTimerOutcome('started')"><i class="ti ti-check"></i> I started</button>
-      <button class="btn sky" onclick="nowTimerOutcome('continued')"><i class="ti ti-player-play"></i> I continued</button>
-      <button class="btn lavender" onclick="nowTimerOutcome('finished')"><i class="ti ti-flag-check"></i> I finished the task</button>
-      <button class="btn amber-btn" onclick="nowTimerOutcome('stuck')"><i class="ti ti-help"></i> I got stuck</button>
-      <button class="btn peach" onclick="nowTimerOutcome('reset')"><i class="ti ti-refresh"></i> I need a reset</button>
-      <button class="btn" onclick="nowStartTimer(state.nowTimerMins || 5)"><i class="ti ti-rotate"></i> Another round</button>
-    </div>`;
-}
-
-// ─── AI breakdown ────────────────────────────────────────
-async function renderAiSteps() {
-  const undone = state.tasks.filter(t => !t.done);
-  const cur    = undone[0];
-
-  // First time: trigger the API call
-  if (!state.nowAiSteps && !state.nowAiLoading) {
-    state.nowAiLoading = true;
-    renderAiStepsView();
-    try {
-      state.nowAiSteps = await callClaude(
-        'Break this task into 3 to 5 very small first steps. Each step should be one short sentence, doable in 2 minutes or less. Use plain language. No motivation. Just a numbered list. Task: ' + (cur ? cur.text : 'the current task'),
-        'You are Bowline, a calm support app. Be literal, direct, and brief.'
-      );
-    } catch (e) {
-      state.nowAiSteps = 'AI is not available right now. Try the Make smaller option instead — it works offline.';
-    }
-    state.nowAiLoading = false;
-  }
-  renderAiStepsView();
-}
-
-function renderAiStepsView() {
-  const undone = state.tasks.filter(t => !t.done);
-  const cur    = undone[0];
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="card teal">
-        <div class="card-label">Breaking down</div>
-        <div class="card-main" style="font-size:16px">${cur ? cur.text : 'The current task'}</div>
-      </div>
-
-      ${state.nowAiLoading ? `
-        <div style="display:flex;align-items:center;gap:12px;padding:1.5rem;justify-content:center">
-          <div class="spinner"></div>
-          <span style="font-size:14px;color:var(--text-secondary)">Finding the smallest first step...</span>
         </div>
       ` : ''}
 
-      ${state.nowAiSteps ? `
-        <div class="ai-out">${state.nowAiSteps}</div>
-        <button class="btn primary" style="margin-top:12px" onclick="nowStartTimer(5)">
-          <i class="ti ti-clock"></i> Body double on step one for 5 min
-        </button>
-        <button class="btn" onclick="state.nowAiSteps=null;nowSetView('aiSteps')">
-          <i class="ti ti-rotate"></i> Generate again
-        </button>
-      ` : ''}
-
-      <button class="btn" style="margin-top:8px;color:var(--text-muted)" onclick="state.nowAiSteps=null;nowSetView('main')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-    </div>`;
-}
-
-// ═══════════════════════════════════════════════════════════
-// TITRATION TRACKER
-// ═══════════════════════════════════════════════════════════
-
-// ─── Helpers ─────────────────────────────────────────────
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function nowTime() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-
-function streakDays() {
-  if (state.titrationEntries.length === 0) return 0;
-  const dates = [...new Set(state.titrationEntries.map(e => e.dateISO))].sort().reverse();
-  let streak = 0;
-  let cursor = new Date();
-  for (const d of dates) {
-    const cursorISO = cursor.toISOString().slice(0, 10);
-    if (d === cursorISO) {
-      streak++;
-      cursor.setDate(cursor.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-function trendArrow(values) {
-  if (!values || values.length < 2) return { icon: 'ti-minus', color: 'var(--text-muted)', label: 'stable' };
-  const recent = values.slice(-3).filter(v => v != null);
-  const earlier = values.slice(-6, -3).filter(v => v != null);
-  if (recent.length === 0 || earlier.length === 0) return { icon: 'ti-minus', color: 'var(--text-muted)', label: 'stable' };
-  const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
-  const earlierAvg = earlier.reduce((a, b) => a + b, 0) / earlier.length;
-  const diff = recentAvg - earlierAvg;
-  const pct = earlierAvg ? (diff / earlierAvg) * 100 : 0;
-  if (Math.abs(pct) < 3) return { icon: 'ti-minus', color: 'var(--teal)', label: 'stable' };
-  if (pct > 0) return { icon: 'ti-trending-up', color: 'var(--amber)', label: 'up' };
-  return { icon: 'ti-trending-down', color: 'var(--sky)', label: 'down' };
-}
-
-function severityColor(sev) {
-  const s = SEVERITY.find(x => x.k === sev);
-  return s ? s.color : '#9aa39c';
-}
-
-// ─── Titration hub ───────────────────────────────────────
-function renderTitrationHub() {
-  const entries = state.titrationEntries;
-  const count = entries.length;
-  const streak = streakDays();
-
-  // Trend calculations
-  const bpSysVals = entries.map(e => e.bp_sys).filter(v => v != null);
-  const hrVals    = entries.map(e => e.hr).filter(v => v != null);
-  const wtVals    = entries.map(e => e.weight).filter(v => v != null);
-  const bpTrend = trendArrow(bpSysVals);
-  const hrTrend = trendArrow(hrVals);
-  const wtTrend = trendArrow(wtVals);
-
-  const last = entries[entries.length - 1];
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('main')">
-        <i class="ti ti-arrow-left"></i> Back to Now
-      </button>
-
-      <div class="card lavender">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <i class="ti ti-pill" style="font-size:28px;color:var(--lavender);flex-shrink:0"></i>
-          <div style="flex:1">
-            <div class="card-label">Titration tracker</div>
-            <div class="card-main" style="font-size:17px">Your dose-finding companion</div>
-            <div class="card-sub" style="margin-top:6px;line-height:1.6">
-              Log what your body and brain are telling you. Honest data helps your prescriber adjust faster.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${count === 0 ? `
-        <div class="notice blue" style="text-align:center;padding:1.25rem">
-          <i class="ti ti-clipboard-plus" style="font-size:28px;color:var(--sky);display:block;margin-bottom:8px"></i>
-          <strong>No entries yet.</strong><br>
-          Start logging today. Even a quick entry helps build the picture.
-        </div>
-      ` : `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-          <div class="card teal" style="padding:1rem;text-align:center">
-            <div style="font-size:28px;font-weight:700;color:var(--teal-deep);line-height:1">${streak}</div>
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">day streak</div>
-          </div>
-          <div class="card sky" style="padding:1rem;text-align:center">
-            <div style="font-size:28px;font-weight:700;color:var(--sky-deep, var(--sky));line-height:1">${count}</div>
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">total entries</div>
-          </div>
-        </div>
-
-        ${last ? `
-          <div class="section-label">Last entry · ${formatDate(last.dateISO)} at ${last.time || '—'}</div>
-          <div class="card" style="padding:0.85rem 1.25rem">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
-              <div>
-                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">BP</div>
-                <div style="font-size:16px;font-weight:700;margin-top:2px">${last.bp_sys != null && last.bp_dia != null ? `${last.bp_sys}/${last.bp_dia}` : '—'}</div>
-                <i class="ti ${bpTrend.icon}" style="font-size:14px;color:${bpTrend.color};margin-top:2px"></i>
-              </div>
-              <div>
-                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">HR</div>
-                <div style="font-size:16px;font-weight:700;margin-top:2px">${last.hr != null ? last.hr : '—'}</div>
-                <i class="ti ${hrTrend.icon}" style="font-size:14px;color:${hrTrend.color};margin-top:2px"></i>
-              </div>
-              <div>
-                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Weight</div>
-                <div style="font-size:16px;font-weight:700;margin-top:2px">${last.weight != null ? last.weight : '—'}</div>
-                <i class="ti ${wtTrend.icon}" style="font-size:14px;color:${wtTrend.color};margin-top:2px"></i>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-      `}
-
-      <button class="btn primary" onclick="titrationStartLog()">
-        <i class="ti ti-clipboard-plus"></i> Log new entry
-      </button>
-
-      ${count > 0 ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <button class="btn sky" style="margin:0" onclick="nowSetView('titrationHistory')">
-            <i class="ti ti-history"></i> History
-          </button>
-          <button class="btn teal" style="margin:0" onclick="nowSetView('titrationChart')">
-            <i class="ti ti-chart-line"></i> Trends
+      ${savedKey ? `
+        <div class="notice green">
+          You last looked at: <strong>${STAGES.find(s => s.k === savedKey)?.l || ''}</strong>
+          <button class="btn primary" style="margin-top:10px;margin-bottom:0" onclick="openStage('${savedKey}')">
+            <i class="ti ti-arrow-right"></i> Continue from here
           </button>
         </div>
-        <button class="btn amber-btn" onclick="nowSetView('titrationExport')">
-          <i class="ti ti-file-export"></i> Export for prescriber
-        </button>
       ` : ''}
 
-      <div class="notice green" style="margin-top:1.25rem">
-        <strong>Why log?</strong> Memory fades between appointments. A few seconds a day gives your prescriber the evidence they need to get your dose right faster.
-      </div>
-    </div>`;
-}
+      <div class="section-label">Where are you right now?</div>
 
-// ─── Titration log entry form ────────────────────────────
-function renderTitrationLog() {
-  if (!state.titrationDraft) {
-    state.titrationDraft = {
-      id: Date.now(),
-      dateISO: todayISO(),
-      time: nowTime(),
-      dose: '',
-      bp_sys: null,
-      bp_dia: null,
-      hr: null,
-      weight: null,
-      mood: null,
-      sideEffects: {},
-      notes: '',
-    };
-    SIDE_EFFECTS.forEach(se => { state.titrationDraft.sideEffects[se.k] = 'none'; });
-  }
-  const d = state.titrationDraft;
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="titrationCancelLog()">
-        <i class="ti ti-arrow-left"></i> Cancel
-      </button>
-
-      <div class="card lavender">
-        <div class="card-label">New titration entry</div>
-        <div class="card-main" style="font-size:16px">${formatDate(d.dateISO)}</div>
-        <div class="card-sub">Fill what you can. Skip anything you do not have right now.</div>
-      </div>
-
-      <!-- Date & Time -->
-      <div class="section-label"><i class="ti ti-calendar" style="color:var(--lavender);font-size:14px"></i> When</div>
-      <div class="card" style="padding:1rem 1.25rem">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Date</label>
-            <input type="date" id="t-date" value="${d.dateISO}" onchange="titrationField('dateISO', this.value)"
-              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Time</label>
-            <input type="time" id="t-time" value="${d.time}" onchange="titrationField('time', this.value)"
-              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
-          </div>
-        </div>
-      </div>
-
-      <!-- Dose -->
-      <div class="section-label"><i class="ti ti-pill" style="color:var(--lavender);font-size:14px"></i> Dose</div>
-      <div class="card" style="padding:1rem 1.25rem">
-        <input type="text" placeholder="e.g. Elvanse 30mg, Concerta 36mg" value="${d.dose || ''}"
-          oninput="titrationField('dose', this.value)"
-          style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;background:var(--bg-card);color:var(--text-primary)">
-      </div>
-
-      <!-- Vitals -->
-      <div class="section-label"><i class="ti ti-heart-rate-monitor" style="color:var(--teal);font-size:14px"></i> Vitals</div>
-      <div class="card" style="padding:1rem 1.25rem">
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Blood pressure</label>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-              <input type="number" placeholder="120" value="${d.bp_sys ?? ''}" min="50" max="250"
-                oninput="titrationField('bp_sys', this.value ? parseInt(this.value) : null)"
-                style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;background:var(--bg-card);color:var(--text-primary)">
-              <span style="color:var(--text-muted);font-weight:700">/</span>
-              <input type="number" placeholder="80" value="${d.bp_dia ?? ''}" min="30" max="150"
-                oninput="titrationField('bp_dia', this.value ? parseInt(this.value) : null)"
-                style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;background:var(--bg-card);color:var(--text-primary)">
-            </div>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Heart rate</label>
-            <input type="number" placeholder="bpm" value="${d.hr ?? ''}" min="30" max="250"
-              oninput="titrationField('hr', this.value ? parseInt(this.value) : null)"
-              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Weight</label>
-            <input type="number" placeholder="kg" value="${d.weight ?? ''}" min="20" max="300" step="0.1"
-              oninput="titrationField('weight', this.value ? parseFloat(this.value) : null)"
-              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
-          </div>
-        </div>
-      </div>
-
-      <!-- Mood -->
-      <div class="section-label"><i class="ti ti-mood-smile" style="color:var(--sky);font-size:14px"></i> Mood today</div>
-      <div class="card" style="padding:0.85rem 1rem">
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-          ${TITRATION_MOODS.map(m => `
-            <button onclick="titrationField('mood', ${m.k})"
-              style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;
-                     border:2px solid ${d.mood === m.k ? 'var(--sky)' : 'var(--border)'};
-                     background:${d.mood === m.k ? 'var(--sky-l)' : 'var(--bg-card)'};
-                     border-radius:var(--r-md);cursor:pointer;font-family:var(--font);
-                     color:var(--text-primary)">
-              <i class="ti ${m.icon}" style="font-size:22px;color:${d.mood === m.k ? 'var(--sky-d, var(--sky))' : 'var(--text-secondary)'}"></i>
-              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px">${m.l}</span>
-            </button>
-          `).join('')}
-        </div>
-      </div>
-
-      <!-- Side effects -->
-      <div class="section-label"><i class="ti ti-alert-circle" style="color:var(--amber);font-size:14px"></i> Side effects</div>
-      <div class="notice blue" style="margin-bottom:0.85rem;font-size:13px">
-        Tap to set severity. Default is none — only change what you noticed.
-      </div>
-      <div class="card" style="padding:0.5rem 1rem">
-        ${SIDE_EFFECTS.map(se => `
-          <div style="padding:10px 0;border-bottom:1.5px solid var(--border)">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-              <i class="ti ${se.icon}" style="font-size:18px;color:var(--text-secondary);flex-shrink:0"></i>
-              <div style="font-size:14px;font-weight:700;flex:1">${se.l}</div>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
-              ${SEVERITY.map(sev => {
-                const isSelected = d.sideEffects[se.k] === sev.k;
-                return `
-                  <button onclick="titrationSetSideEffect('${se.k}', '${sev.k}')"
-                    style="padding:6px 4px;
-                           border:1.5px solid ${isSelected ? sev.color : 'var(--border)'};
-                           background:${isSelected ? sev.color : 'var(--bg-card)'};
-                           color:${isSelected ? '#fff' : 'var(--text-secondary)'};
-                           border-radius:var(--r-pill);cursor:pointer;font-family:var(--font);
-                           font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px">
-                    ${sev.l}
-                  </button>`;
-              }).join('')}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Notes -->
-      <div class="section-label"><i class="ti ti-note" style="color:var(--peach);font-size:14px"></i> Other notes</div>
-      <div class="card" style="padding:1rem 1.25rem">
-        <textarea placeholder="Anything else worth recording — other side effects, what helped, what was hard..."
-          oninput="titrationField('notes', this.value)"
-          style="width:100%;min-height:80px;padding:10px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;resize:vertical;background:var(--bg-card);color:var(--text-primary)">${d.notes || ''}</textarea>
-      </div>
-
-      <button class="btn primary" style="margin-top:1rem" onclick="titrationSaveLog()">
-        <i class="ti ti-check"></i> Save entry
-      </button>
-      <button class="btn" onclick="titrationCancelLog()">
-        <i class="ti ti-x"></i> Cancel
-      </button>
-    </div>`;
-}
-
-// ─── Titration history ───────────────────────────────────
-function renderTitrationHistory() {
-  const entries = [...state.titrationEntries].sort((a, b) => {
-    if (a.dateISO !== b.dateISO) return b.dateISO.localeCompare(a.dateISO);
-    return (b.time || '').localeCompare(a.time || '');
-  });
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-
-      <div class="card sky">
-        <div class="card-label">History</div>
-        <div class="card-main" style="font-size:16px">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</div>
-        <div class="card-sub">Newest first. Tap any entry to delete it.</div>
-      </div>
-
-      ${entries.length === 0 ? `
-        <div class="notice blue" style="text-align:center;padding:1.5rem">
-          No entries yet. Log your first one to see it here.
-        </div>
-      ` : entries.map(e => {
-        const flagged = Object.values(e.sideEffects || {}).filter(s => s === 'moderate' || s === 'severe').length;
-        const mood = TITRATION_MOODS.find(m => m.k === e.mood);
+      ${STAGES.map(s => {
+        const isCurrent  = s.k === savedKey;
+        const isComplete = completedStages.includes(s.k);
         return `
-          <div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
-              <div>
-                <div style="font-size:15px;font-weight:700">${formatDate(e.dateISO)}</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${e.time || '—'}${e.dose ? ' · ' + e.dose : ''}</div>
-              </div>
-              <button onclick="titrationDelete(${e.id})"
-                style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px"
-                aria-label="Delete entry">
-                <i class="ti ti-trash" style="font-size:16px"></i>
-              </button>
+          <button class="btn ${isCurrent ? 'primary' : ''}"
+            style="${!isCurrent ? `border-left:4px solid var(--${s.color})` : ''}"
+            onclick="openStage('${s.k}')">
+            <span style="
+              width:30px;height:30px;border-radius:50%;
+              background:${isCurrent ? 'rgba(255,255,255,0.2)' : `var(--${s.color}-l)`};
+              color:${isCurrent ? '#fff' : `var(--${s.color}-d)`};
+              font-size:13px;font-weight:700;
+              display:flex;align-items:center;justify-content:center;
+              flex-shrink:0">
+              ${isComplete ? '<i class="ti ti-check" style="font-size:16px"></i>' : s.num}
+            </span>
+            <div style="flex:1;text-align:left">
+              <div style="font-size:14px">${s.l}</div>
+              <div style="font-size:12px;font-weight:400;opacity:${isCurrent ? '0.85' : '0.65'};margin-top:2px">${s.sub}</div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px 0;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);margin-bottom:8px">
-              <div style="text-align:center">
-                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">BP</div>
-                <div style="font-size:13px;font-weight:700;margin-top:2px">${e.bp_sys != null && e.bp_dia != null ? `${e.bp_sys}/${e.bp_dia}` : '—'}</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">HR</div>
-                <div style="font-size:13px;font-weight:700;margin-top:2px">${e.hr ?? '—'}</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Weight</div>
-                <div style="font-size:13px;font-weight:700;margin-top:2px">${e.weight ?? '—'}</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Mood</div>
-                <div style="font-size:13px;font-weight:700;margin-top:2px">${mood ? mood.l : '—'}</div>
-              </div>
-            </div>
-            ${flagged > 0 ? `
-              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-                ${SIDE_EFFECTS.filter(se => {
-                  const s = e.sideEffects?.[se.k];
-                  return s === 'moderate' || s === 'severe';
-                }).map(se => {
-                  const sev = e.sideEffects[se.k];
-                  return `<span style="font-size:11px;padding:3px 8px;border-radius:var(--r-pill);background:${severityColor(sev)};color:#fff;font-weight:700">${se.l} · ${sev}</span>`;
-                }).join('')}
-              </div>
-            ` : ''}
-            ${e.notes ? `
-              <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;font-style:italic">"${e.notes}"</div>
-            ` : ''}
-          </div>`;
+            <i class="ti ti-chevron-right" style="font-size:18px;opacity:0.5;flex-shrink:0"></i>
+          </button>`;
       }).join('')}
-    </div>`;
-}
 
-// ─── Titration chart ─────────────────────────────────────
-function renderTitrationChart() {
-  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-
-  if (entries.length < 2) {
-    document.getElementById('content').innerHTML = `
-      <div class="screen">
-        <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
-          <i class="ti ti-arrow-left"></i> Back
-        </button>
-        <div class="notice blue" style="text-align:center;padding:1.5rem">
-          <i class="ti ti-chart-line" style="font-size:28px;color:var(--sky);display:block;margin-bottom:8px"></i>
-          <strong>Need at least 2 entries for trends.</strong><br>
-          Keep logging — patterns will appear once you have a few days of data.
-        </div>
-        <button class="btn primary" onclick="titrationStartLog()">
-          <i class="ti ti-clipboard-plus"></i> Log new entry
-        </button>
-      </div>`;
-    return;
-  }
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-
-      <div class="card teal">
-        <div class="card-label">Trends</div>
-        <div class="card-main" style="font-size:16px">Last ${Math.min(entries.length, 14)} entries</div>
-        <div class="card-sub">Each point is one entry. Hover or tap for details.</div>
-      </div>
-
-      ${renderSparkline(entries, 'Blood pressure (systolic)', 'bp_sys', 'teal', 80, 180)}
-      ${renderSparkline(entries, 'Blood pressure (diastolic)', 'bp_dia', 'sky', 50, 110)}
-      ${renderSparkline(entries, 'Heart rate', 'hr', 'amber', 50, 140)}
-      ${renderSparkline(entries, 'Weight', 'weight', 'lavender', null, null)}
-      ${renderSparkline(entries, 'Mood (1-5)', 'mood', 'peach', 1, 5)}
-
-      <div class="notice green" style="margin-top:1rem">
-        <strong>What to share with your prescriber:</strong> any clear upward or downward trends, especially in BP, HR, or weight. Mood dips and side-effect spikes also matter.
+      <div class="notice blue" style="margin-top:1.25rem">
+        <strong>Stage navigation.</strong> Pick the stage that fits where you are now. You can revisit any stage at any time, in any order.
       </div>
     </div>`;
 }
 
-function renderSparkline(entries, label, field, color, minOverride, maxOverride) {
-  const data = entries.slice(-14).map(e => ({ x: e.dateISO, y: e[field] }));
-  const validData = data.filter(d => d.y != null);
-  if (validData.length < 2) {
-    return `
-      <div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
-        <div class="card-label">${label}</div>
-        <div style="font-size:12px;color:var(--text-muted);padding:8px 0">Not enough data yet.</div>
-      </div>`;
-  }
+// ─── Stage detail view ───────────────────────────────────
+function renderStage() {
+  const s = STAGES.find(st => st.k === state.diagnosisStage);
+  if (!s) { state.diagnosisStage = null; renderDiagnosis(); return; }
 
-  const values = validData.map(d => d.y);
-  const dataMin = Math.min(...values);
-  const dataMax = Math.max(...values);
-  const min = minOverride != null ? Math.min(minOverride, dataMin) : dataMin;
-  const max = maxOverride != null ? Math.max(maxOverride, dataMax) : dataMax;
-  const range = max - min || 1;
+  const tab = state.diagnosisTab || 'overview';
+  const stageIdx = STAGES.findIndex(x => x.k === state.diagnosisStage);
+  const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
+  const nextStage = stageIdx < STAGES.length - 1 ? STAGES[stageIdx + 1] : null;
 
-  const w = 300;
-  const h = 60;
-  const pad = 4;
-  const stepX = (w - pad * 2) / Math.max(1, validData.length - 1);
-
-  const points = validData.map((d, i) => {
-    const x = pad + i * stepX;
-    const y = h - pad - ((d.y - min) / range) * (h - pad * 2);
-    return { x, y, val: d.y, date: d.x };
-  });
-
-  const path = points.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
-  const areaPath = `${path} L${points[points.length - 1].x},${h - pad} L${points[0].x},${h - pad} Z`;
-
-  const latest = points[points.length - 1];
-  const first  = points[0];
-  const change = latest.val - first.val;
-  const changeStr = change > 0 ? `+${change.toFixed(field === 'weight' ? 1 : 0)}` : change.toFixed(field === 'weight' ? 1 : 0);
-
-  return `
-    <div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-        <div class="card-label">${label}</div>
-        <div style="display:flex;gap:10px;align-items:baseline">
-          <span style="font-size:18px;font-weight:700;color:var(--${color});line-height:1">${latest.val}${field === 'weight' ? '' : ''}</span>
-          <span style="font-size:11px;color:var(--text-muted)">${change >= 0 ? '↑' : '↓'} ${changeStr}</span>
-        </div>
-      </div>
-      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:60px;overflow:visible">
-        <path d="${areaPath}" fill="var(--${color}-l)" opacity="0.5"/>
-        <path d="${path}" fill="none" stroke="var(--${color})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        ${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="var(--${color})"><title>${p.date}: ${p.val}</title></circle>`).join('')}
-      </svg>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
-        <span>${formatDate(validData[0].x)}</span>
-        <span>${formatDate(validData[validData.length - 1].x)}</span>
-      </div>
-    </div>`;
-}
-
-// ─── Titration export ────────────────────────────────────
-function renderTitrationExport() {
-  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-
-  document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
-        <i class="ti ti-arrow-left"></i> Back
-      </button>
-
-      <div class="card amber">
-        <div class="card-label">Export for prescriber</div>
-        <div class="card-main" style="font-size:16px">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</div>
-        <div class="card-sub">Copy a summary, or download as CSV to email or print.</div>
-      </div>
-
-      <button class="btn primary" onclick="titrationCopyText(this)">
-        <i class="ti ti-copy"></i> Copy summary to clipboard
-      </button>
-      <button class="btn sky" onclick="titrationDownloadCSV()">
-        <i class="ti ti-download"></i> Download CSV
-      </button>
-      <button class="btn" onclick="titrationPrintView()">
-        <i class="ti ti-printer"></i> Print
-      </button>
-
-      <div class="section-label">Preview</div>
-      <div class="card" style="padding:1rem 1.25rem;font-family:var(--font-mono, monospace);font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-x:auto">${buildExportText(entries)}</div>
-    </div>`;
-}
-
-function buildExportText(entries) {
-  let out = `BOWLINE — TITRATION LOG\n`;
-  out += `Generated: ${new Date().toLocaleString('en-GB')}\n`;
-  out += `Entries: ${entries.length}\n`;
-  out += `${'─'.repeat(50)}\n\n`;
-
-  entries.forEach(e => {
-    out += `${formatDate(e.dateISO)} · ${e.time || '—'}\n`;
-    if (e.dose) out += `  Dose: ${e.dose}\n`;
-    if (e.bp_sys != null && e.bp_dia != null) out += `  BP: ${e.bp_sys}/${e.bp_dia} mmHg\n`;
-    if (e.hr != null) out += `  HR: ${e.hr} bpm\n`;
-    if (e.weight != null) out += `  Weight: ${e.weight} kg\n`;
-    if (e.mood != null) {
-      const mood = TITRATION_MOODS.find(m => m.k === e.mood);
-      out += `  Mood: ${mood ? mood.l : e.mood}/5\n`;
-    }
-    const flagged = SIDE_EFFECTS.filter(se => {
-      const s = e.sideEffects?.[se.k];
-      return s && s !== 'none';
-    });
-    if (flagged.length > 0) {
-      out += `  Side effects:\n`;
-      flagged.forEach(se => {
-        out += `    - ${se.l}: ${e.sideEffects[se.k]}\n`;
-      });
-    }
-    if (e.notes) out += `  Notes: ${e.notes}\n`;
-    out += '\n';
-  });
-
-  return out;
-}
-
-function buildCSV(entries) {
-  const headers = [
-    'Date', 'Time', 'Dose', 'BP_Systolic', 'BP_Diastolic', 'HR', 'Weight', 'Mood(1-5)',
-    ...SIDE_EFFECTS.map(se => `SE_${se.k}`),
-    'Notes',
+  const TABS = [
+    { k: 'overview', l: 'Overview',  icon: 'ti-info-circle' },
+    { k: 'prepare',  l: 'Prepare',   icon: 'ti-checklist' },
+    { k: 'scripts',  l: 'Scripts',   icon: 'ti-message-2' },
+    { k: 'support',  l: 'Support',   icon: 'ti-heart' },
+    { k: 'links',    l: 'Links',     icon: 'ti-external-link' },
   ];
-  const rows = entries.map(e => [
-    e.dateISO,
-    e.time || '',
-    e.dose || '',
-    e.bp_sys ?? '',
-    e.bp_dia ?? '',
-    e.hr ?? '',
-    e.weight ?? '',
-    e.mood ?? '',
-    ...SIDE_EFFECTS.map(se => e.sideEffects?.[se.k] || 'none'),
-    (e.notes || '').replace(/"/g, '""'),
-  ]);
-  return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+
+  // Progress on prep checklist
+  const checked = state.diagnosisChecked[s.k] || new Array(s.prepare.length).fill(false);
+  const completedCount = checked.filter(Boolean).length;
+  const prepPct = (completedCount / s.prepare.length) * 100;
+
+  let tabContent = '';
+  if (tab === 'overview') tabContent = renderOverview(s);
+  if (tab === 'prepare')  tabContent = renderPrepare(s, checked);
+  if (tab === 'scripts')  tabContent = renderScripts(s);
+  if (tab === 'support')  tabContent = renderSupport(s);
+  if (tab === 'links')    tabContent = renderLinks(s);
+
+  document.getElementById('content').innerHTML = `
+    <div class="screen">
+      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="closeStage()">
+        <i class="ti ti-arrow-left"></i> All stages
+      </button>
+
+      <div class="card ${s.color}">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <i class="ti ${s.icon}" style="font-size:28px;color:var(--${s.color});flex-shrink:0"></i>
+          <div>
+            <div class="card-label">Stage ${s.num} of ${STAGES.length}</div>
+            <div class="card-main">${s.l}</div>
+          </div>
+        </div>
+      </div>
+
+      ${tab === 'prepare' && s.prepare.length > 0 ? `
+        <div class="progress-bar" style="margin-bottom:16px">
+          <div class="progress-fill" style="width:${prepPct}%"></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;text-align:center">
+          ${completedCount} of ${s.prepare.length} prep items done
+        </div>
+      ` : ''}
+
+      <!-- Tab strip -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">
+        ${TABS.map(t => `
+          <button onclick="setStageTab('${t.k}')"
+            style="padding:7px 12px;white-space:nowrap;
+                   border:2px solid ${tab === t.k ? `var(--${s.color})` : 'var(--border)'};
+                   border-radius:var(--r-pill);
+                   background:${tab === t.k ? `var(--${s.color}-l)` : 'var(--bg-card)'};
+                   color:${tab === t.k ? `var(--${s.color}-d)` : 'var(--text-primary)'};
+                   font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;
+                   display:flex;align-items:center;gap:5px;flex-shrink:0">
+            <i class="ti ${t.icon}" style="font-size:14px"></i>${t.l}
+          </button>`).join('')}
+      </div>
+
+      ${tabContent}
+
+      <!-- Stage navigation -->
+      <div style="display:flex;gap:8px;margin-top:1.5rem">
+        ${prevStage ? `
+          <button class="btn" style="flex:1;justify-content:flex-start;font-size:13px" onclick="openStage('${prevStage.k}')">
+            <i class="ti ti-arrow-left"></i> ${prevStage.sub}
+          </button>` : '<div style="flex:1"></div>'}
+        ${nextStage ? `
+          <button class="btn primary" style="flex:1;justify-content:flex-end;font-size:13px" onclick="openStage('${nextStage.k}')">
+            ${nextStage.sub} <i class="ti ti-arrow-right"></i>
+          </button>` : '<div style="flex:1"></div>'}
+      </div>
+    </div>`;
+}
+
+// ─── Overview tab ────────────────────────────────────────
+function renderOverview(s) {
+  return `
+    <div class="section-label">What this stage is about</div>
+    <div class="notice ${s.color === 'lavender' ? 'purple' : s.color === 'sky' ? 'blue' : s.color === 'teal' ? 'green' : s.color}" style="line-height:1.7">
+      ${s.what}
+    </div>
+
+    <div class="section-label">What happens next</div>
+    ${s.next.map((item, i) => `
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1.5px solid var(--border)">
+        <span style="
+          width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:1px;
+          background:var(--${s.color}-l);color:var(--${s.color}-d);
+          font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">
+          ${i + 1}
+        </span>
+        <div style="font-size:15px;color:var(--text-primary);line-height:1.5;flex:1">${item}</div>
+      </div>`).join('')}
+
+    <button class="btn primary" style="margin-top:1.25rem" onclick="setStageTab('prepare')">
+      <i class="ti ti-checklist"></i> Start preparing
+    </button>
+  `;
+}
+
+// ─── Prepare tab (interactive checklist) ─────────────────
+function renderPrepare(s, checked) {
+  return `
+    <div class="section-label">How to prepare</div>
+    <div class="notice blue" style="margin-bottom:0.85rem">
+      Tap each item to mark it done. Your progress is saved.
+    </div>
+    <div class="card" style="padding:0.5rem 1.25rem">
+      ${s.prepare.map((item, i) => `
+        <div class="task-row">
+          <div class="task-check${checked[i] ? ' done' : ''}"
+            onclick="toggleStagePrep(${i})"
+            role="checkbox"
+            aria-checked="${checked[i]}"
+            aria-label="${item}">
+            ${checked[i] ? '<i class="ti ti-check" style="font-size:14px"></i>' : ''}
+          </div>
+          <div class="task-text${checked[i] ? ' done' : ''}" style="font-size:15px;font-weight:${checked[i] ? '400' : '700'}">${item}</div>
+        </div>`).join('')}
+    </div>
+
+    ${checked.filter(Boolean).length === s.prepare.length ? `
+      <div class="notice green" style="margin-top:0.85rem;text-align:center">
+        <strong>Prep complete for this stage.</strong> When you are ready, move to the next stage.
+      </div>
+    ` : ''}
+
+    <button class="btn" style="margin-top:0.5rem" onclick="resetStagePrep()">
+      <i class="ti ti-rotate"></i> Reset this checklist
+    </button>
+  `;
+}
+
+// ─── Scripts tab (copyable) ──────────────────────────────
+function renderScripts(s) {
+  return `
+    <div class="section-label">Scripts for conversations</div>
+    <div class="notice blue" style="margin-bottom:0.85rem">
+      These are starting points. Edit them to sound like you before using.
+    </div>
+    ${s.scripts.map((sc, i) => `
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-label">${sc.l}</div>
+        <div style="font-size:14px;color:var(--text-primary);line-height:1.6;margin:8px 0 12px;padding:10px;background:var(--bg-page);border-radius:var(--r-md);border:1px solid var(--border)">
+          "${sc.t}"
+        </div>
+        <button onclick="copyScriptDiag(${i}, this)"
+          class="btn sky" style="width:auto;padding:8px 14px;margin:0;font-size:13px">
+          <i class="ti ti-copy"></i> Copy
+        </button>
+      </div>`).join('')}
+  `;
+}
+
+// ─── Support tab ──────────────────────────────────────────
+function renderSupport(s) {
+  return `
+    <div class="section-label">Support you can use now</div>
+    <div class="notice green" style="margin-bottom:0.85rem">
+      You do not need to wait for a diagnosis to use any of these.
+    </div>
+    <div class="card" style="padding:0.5rem 1.25rem">
+      ${s.support.map(item => `
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1.5px solid var(--border)">
+          <i class="ti ti-check" style="color:var(--teal);font-size:18px;flex-shrink:0;margin-top:2px"></i>
+          <div style="font-size:15px;color:var(--text-primary);line-height:1.5;flex:1">${item}</div>
+        </div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem">
+      <button class="btn primary" style="margin:0" onclick="go('today')">
+        <i class="ti ti-sun"></i> Open Today
+      </button>
+      <button class="btn sky" style="margin:0" onclick="go('reset')">
+        <i class="ti ti-refresh"></i> Open Reset
+      </button>
+    </div>
+  `;
+}
+
+// ─── Links tab ────────────────────────────────────────────
+function renderLinks(s) {
+  return `
+    <div class="section-label">Useful links for this stage</div>
+    <div class="notice blue" style="margin-bottom:0.85rem">
+      External resources. All open in a new tab.
+    </div>
+    ${s.links.map(lk => `
+      <a href="${lk.url}" target="_blank" rel="noopener noreferrer" class="link-card">
+        <div class="link-icon" style="background:${LINK_BG[lk.color] || 'var(--teal-l)'}">
+          <i class="ti ${lk.icon}" style="color:${LINK_IC[lk.color] || 'var(--teal)'}"></i>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="link-title">${lk.title}</div>
+          <div class="link-sub">${lk.sub}</div>
+        </div>
+        <i class="ti ti-external-link" style="font-size:16px;color:var(--text-muted);flex-shrink:0"></i>
+      </a>`).join('')}
+  `;
 }
 
 // ─── Window handlers ──────────────────────────────────────
-window.nowSetView = function (v) {
-  state.nowView = v;
-  renderNow();
+window.openStage = function (k) {
+  state.diagnosisStage    = k;
+  state.diagnosisStageKey = k;
+  state.diagnosisTab      = 'overview';
+  renderDiagnosis();
 };
 
-window.nowPickStuck = function (k) {
-  state.nowStuckReason = k;
-  state.nowView = 'stuckResponse';
-  renderNow();
+window.closeStage = function () {
+  state.diagnosisStage = null;
+  state.diagnosisTab   = 'overview';
+  renderDiagnosis();
 };
 
-window.nowDone = function (id) {
-  const t = state.tasks.find(t => t.id === id);
-  if (t) t.done = true;
-  state.nowView = 'main';
-  renderNow();
+window.setStageTab = function (t) {
+  state.diagnosisTab = t;
+  renderDiagnosis();
 };
 
-window.nowSnooze = function (id) {
-  const t = state.tasks.find(t => t.id === id);
-  if (t) {
-    const i = state.tasks.indexOf(t);
-    state.tasks.splice(i, 1);
-    state.tasks.push(t);
+window.toggleStagePrep = function (idx) {
+  const k = state.diagnosisStage;
+  if (!k) return;
+  const stage = STAGES.find(s => s.k === k);
+  if (!stage) return;
+  if (!state.diagnosisChecked[k]) {
+    state.diagnosisChecked[k] = new Array(stage.prepare.length).fill(false);
   }
-  renderNow();
+  state.diagnosisChecked[k][idx] = !state.diagnosisChecked[k][idx];
+  renderDiagnosis();
 };
 
-window.nowSnoozeCurrent = function () {
-  const cur = state.tasks.filter(t => !t.done)[0];
-  if (cur) window.nowSnooze(cur.id);
-  state.nowView = 'main';
-  renderNow();
-};
-
-window.nowSwap = function (id) {
-  const t = state.tasks.find(t => t.id === id);
-  if (t) {
-    const i = state.tasks.indexOf(t);
-    state.tasks.splice(i, 1);
-    state.tasks.splice(Math.min(2, state.tasks.length), 0, t);
+window.resetStagePrep = function () {
+  const k = state.diagnosisStage;
+  if (!k) return;
+  if (confirm('Reset all prep checkboxes for this stage?')) {
+    const stage = STAGES.find(s => s.k === k);
+    if (stage) state.diagnosisChecked[k] = new Array(stage.prepare.length).fill(false);
+    renderDiagnosis();
   }
-  renderNow();
 };
 
-window.nowApplySmaller = function (idx) {
-  const opt = SMALLER_OPTIONS[idx];
-  const cur = state.tasks.filter(t => !t.done)[0];
-  if (cur && opt) {
-    cur.text = opt.l;
-    cur.meta = 'Reduced · ' + opt.meta;
-  }
-  state.nowView = 'main';
-  renderNow();
+window.copyScriptDiag = function (idx, btn) {
+  const stage = STAGES.find(s => s.k === state.diagnosisStage);
+  if (!stage) return;
+  const script = stage.scripts[idx];
+  if (!script) return;
+
+  navigator.clipboard.writeText(script.t).catch(() => {});
+  btn.innerHTML = '<i class="ti ti-check"></i> Copied';
+  btn.style.background = 'var(--teal-l)';
+  btn.style.color = 'var(--teal-d)';
+  btn.style.borderColor = 'var(--teal)';
+  setTimeout(() => {
+    btn.innerHTML = '<i class="ti ti-copy"></i> Copy';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }, 1800);
 };
 
-window.nowStartTimer = function (mins) {
-  state.nowTimerMins = mins;
-  state.nowTimerEnd  = Date.now() + (mins * 60 * 1000);
-  state.nowView      = 'timer';
-  renderNow();
-};
-
-window.nowFinishTimerEarly = function () {
-  state.nowTimerEnd = Date.now() - 1;
-  state.nowView     = 'timerEnd';
-  renderNow();
-};
-
-window.nowCancelTimer = function () {
-  state.nowTimerEnd  = null;
-  state.nowTimerMins = null;
-  state.nowView      = 'main';
-  renderNow();
-};
-
-window.nowTimerOutcome = function (outcome) {
-  state.nowTimerEnd  = null;
-  if (outcome === 'finished') {
-    const cur = state.tasks.filter(t => !t.done)[0];
-    if (cur) cur.done = true;
-  }
-  if (outcome === 'reset') {
-    state.nowView = 'main';
-    go('reset');
-    return;
-  }
-  state.nowView = 'main';
-  renderNow();
-};
-
-window.nowOpenReset = function (resetKey) {
-  state.nowView    = 'main';
-  state.resetMode  = resetKey;
-  state.resetView  = 'flow';
-  state.resetStep  = 0;
-  go('reset');
-};
-
-// ─── Titration window handlers ───────────────────────────
-window.titrationStartLog = function () {
-  state.titrationDraft = null; // force fresh draft
-  state.nowView = 'titrationLog';
-  renderNow();
-};
-
-window.titrationCancelLog = function () {
-  state.titrationDraft = null;
-  state.nowView = 'titration';
-  renderNow();
-};
-
-window.titrationField = function (key, value) {
-  if (!state.titrationDraft) return;
-  state.titrationDraft[key] = value;
-  // Do not re-render — keep input focus
-};
-
-window.titrationSetSideEffect = function (effectKey, severity) {
-  if (!state.titrationDraft) return;
-  state.titrationDraft.sideEffects[effectKey] = severity;
-  renderNow();
-};
-
-window.titrationSaveLog = function () {
-  const d = state.titrationDraft;
-  if (!d) return;
-  // Read latest values from inputs (covers fields that did not re-render)
-  state.titrationEntries.push({ ...d });
-  state.titrationDraft = null;
-  state.nowView = 'titration';
-  renderNow();
-};
-
-window.titrationDelete = function (id) {
-  if (!confirm('Delete this entry? This cannot be undone.')) return;
-  state.titrationEntries = state.titrationEntries.filter(e => e.id !== id);
-  renderNow();
-};
-
-window.titrationCopyText = function (btn) {
-  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-  const text = buildExportText(entries);
-  navigator.clipboard.writeText(text).catch(() => {});
-  const original = btn.innerHTML;
-  btn.innerHTML = '<i class="ti ti-check"></i> Copied to clipboard';
-  setTimeout(() => { btn.innerHTML = original; }, 1800);
-};
-
-window.titrationDownloadCSV = function () {
-  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-  const csv = buildCSV(entries);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `bowline-titration-${todayISO()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
-
-window.titrationPrintView = function () {
-  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-  const text = buildExportText(entries);
-  const win = window.open('', '_blank');
-  if (!win) return;
-  win.document.write(`
-    <html><head><title>Bowline Titration Log</title>
-    <style>body{font-family:system-ui,sans-serif;padding:24px;max-width:720px;margin:0 auto;line-height:1.5}pre{white-space:pre-wrap;font-size:12px}</style>
-    </head><body><h1>Bowline — Titration Log</h1><pre>${text.replace(/</g, '&lt;')}</pre></body></html>
-  `);
-  win.document.close();
-  setTimeout(() => win.print(), 250);
-};
-
-register('now', renderNow);
+register('diagnosis', renderDiagnosis);
