@@ -8,7 +8,7 @@ if (!state.diagnosisTab)       state.diagnosisTab       = 'overview';
 if (!state.diagnosisChecked)   state.diagnosisChecked   = {}; // { stageKey: [bool, bool, ...] }
 if (!state.diagnosisNotes)     state.diagnosisNotes     = {}; // { stageKey: string }
 
-// ─── Stage definitions (9 stages, full content) ──────────
+// ─── Stage definitions (10 stages, full content) ──────────
 const STAGES = [
   {
     k: 'noticing', num: 1, color: 'lavender', icon: 'ti-bulb',
@@ -516,6 +516,91 @@ const STAGES = [
       { title: 'NHS — Urgent mental health help',
         sub: 'How to get urgent mental health support',
         url: 'https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/behaviours/help-for-suicidal-thoughts/', icon: 'ti-first-aid-kit', color: 'teal' },
+    ],
+  },
+
+  {
+    k: 'titration', num: 10, color: 'sky', icon: 'ti-adjustments',
+    l: 'I am starting titration',
+    sub: 'Finding your medication and dose',
+    what: 'Titration is the process of finding the right medication and the right dose for you. It is not a single appointment — it is a series of small steps over weeks or months. You start on a low dose, see how your body and brain respond, then adjust upwards (or sideways to a different medication) until you find what works. The goal is not the highest dose you can tolerate. The goal is the lowest dose that gives you the benefit you need with side effects you can live with. Some people land on their first medication. Others try two or three. Both are normal. Titration takes patience, and your honest feedback is the most important data your prescriber has.',
+
+    next: [
+      'You will start on a low dose of one medication',
+      'You will be reviewed regularly — usually every 2 to 6 weeks at first',
+      'At each review, the dose may go up, stay the same, or change to a different medication',
+      'You will keep going until you and your prescriber agree you have found the right dose',
+      'Once stable, reviews drop to every 6 to 12 months',
+      'Titration usually takes 2 to 6 months — sometimes longer',
+    ],
+
+    prepare: [
+      'Ask your prescriber which medication you are starting and why',
+      'Ask what side effects to watch for in the first 2 weeks',
+      'Ask what counts as a reason to call before your next review',
+      'Set up a simple daily log — dose, time taken, sleep, appetite, mood, focus',
+      'Plan how you will collect prescriptions (Schedule 2 stimulants cannot be repeat-prescribed)',
+      'Know which pharmacy stocks your medication — stimulants can be hard to find',
+      'Tell someone close to you that you are starting — they may notice changes you miss',
+      'Have a baseline blood pressure and heart rate reading if your prescriber asks',
+      'Plan reviews around work or life events where possible — do not start a new dose before a big presentation',
+    ],
+
+    scripts: [
+      { l: 'At your first titration appointment',
+        t: 'Before we start, can you tell me what to expect over the next few months? What is the usual starting dose, how often will we review, and what should I do if I have side effects between appointments?' },
+      { l: 'Logging honestly — what to tell your prescriber',
+        t: 'Since my last review: the medication helps with [focus / impulsivity / overwhelm] for about [X] hours. The side effects I have noticed are [appetite / sleep / mood / heart rate]. On a scale of 1 to 10, the benefit is [X] and the side effects are [X]. I would like to [stay on this dose / try a higher dose / try something different].' },
+      { l: 'If a dose is not working',
+        t: 'I have been on [dose] for [X] weeks now. I am not noticing much benefit, and the side effects are [list]. I would like to discuss either increasing the dose or trying a different medication.' },
+      { l: 'If side effects are difficult',
+        t: 'I am experiencing [specific side effect] and it is affecting [sleep / eating / mood / work]. It started [when] and it is [getting better / staying the same / getting worse]. I would like to talk about what to do.' },
+      { l: 'If you cannot get hold of your medication',
+        t: 'I have been unable to fill my prescription at [pharmacy]. They do not have stock and have not been able to tell me when they will. Can you help me find an alternative pharmacy, or discuss a temporary alternative?' },
+      { l: 'Asking about Shared Care (UK)',
+        t: 'Now that I am stable on this dose, can we discuss moving to a Shared Care agreement with my GP? I understand this means my GP would take over prescribing while you remain the specialist overseeing my treatment.' },
+      { l: 'If you want to pause or stop',
+        t: 'I would like to discuss pausing or stopping my medication. The reasons are [list]. I understand I should not stop without guidance — can we talk about how to do this safely?' },
+    ],
+
+    support: [
+      'Use Bowline\'s Today and Now to track how each dose actually feels day to day',
+      'Take your medication at the same time every day — set a reminder',
+      'Eat something before stimulants, even if appetite is low — bananas, smoothies, toast',
+      'Drink water through the day — stimulants are mildly dehydrating',
+      'Sleep is the first thing affected — protect it, and tell your prescriber if it suffers',
+      'Do not judge the medication on day one or day two — give each dose at least a week',
+      'Honest feedback at reviews is more important than sounding "fine"',
+      'Side effects often settle in the first 1 to 2 weeks — but tell your prescriber anyway',
+      'Keep a list of any other medications, supplements, or recreational substances — interactions matter',
+      'You can stop or change medication at any point. This is your choice, made with your prescriber.',
+    ],
+
+    links: [
+      { title: 'NICE — ADHD medication guidance',
+        sub: 'Official UK clinical guidelines for ADHD prescribing',
+        url: 'https://www.nice.org.uk/guidance/ng87/chapter/Recommendations#medication', icon: 'ti-clipboard-check', color: 'teal' },
+      { title: 'ADHD UK — Medication overview',
+        sub: 'Plain-language guide to the ADHD medications used in the UK',
+        url: 'https://adhduk.co.uk/adhd-medication/', icon: 'ti-pill', color: 'lavender' },
+      { title: 'ADDitude — Titration explained',
+        sub: 'What to expect during the dose-finding process',
+        url: 'https://www.additudemag.com/adhd-medication-titration-process/', icon: 'ti-adjustments', color: 'sky' },
+      { title: 'ADHD UK — Shared Care agreements',
+        sub: 'Moving prescribing from specialist to GP once stable',
+        url: 'https://adhduk.co.uk/shared-care/', icon: 'ti-users', color: 'amber' },
+      { title: 'NHS — Methylphenidate',
+        sub: 'Official NHS medicine information',
+        url: 'https://www.nhs.uk/medicines/methylphenidate-adults/', icon: 'ti-info-circle', color: 'teal' },
+      { title: 'NHS — Lisdexamfetamine (Elvanse)',
+        sub: 'Official NHS medicine information',
+        url: 'https://www.nhs.uk/medicines/lisdexamfetamine/', icon: 'ti-info-circle', color: 'teal' },
+      { title: 'NHS — Atomoxetine',
+        sub: 'Non-stimulant ADHD medication information',
+        url: 'https://www.nhs.uk/medicines/atomoxetine/', icon: 'ti-info-circle', color: 'teal' },
+      { title: 'NHS — Guanfacine',
+        sub: 'Non-stimulant ADHD medication information',
+        url: 'https://www.nhs.uk/medicines/guanfacine/', icon: 'ti-info-circle', color: 'teal' },
     ],
   },
 ];
