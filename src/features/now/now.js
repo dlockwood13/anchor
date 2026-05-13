@@ -10,6 +10,10 @@ if (!state.nowTimerMins)   state.nowTimerMins = null;
 if (!state.nowAiSteps)     state.nowAiSteps = null;
 if (!state.nowAiLoading)   state.nowAiLoading = false;
 
+// Titration tracker state
+if (!state.titrationEntries) state.titrationEntries = []; // array of log entries
+if (!state.titrationDraft)   state.titrationDraft = null;  // entry being built
+
 const STUCK_OPTIONS = [
   { k: 'start',   l: 'Do not know where to start', icon: 'ti-player-pause' },
   { k: 'big',     l: 'It feels too big',           icon: 'ti-arrows-maximize' },
@@ -127,20 +131,52 @@ const SMALLER_OPTIONS = [
   { l: 'Do the boring prep only.',            meta: 'Set up the environment' },
 ];
 
+// ─── Titration tracker definitions ──────────────────────
+const SIDE_EFFECTS = [
+  { k: 'appetite',    l: 'Appetite ↓',     icon: 'ti-bowl' },
+  { k: 'sleep',       l: 'Sleep affected', icon: 'ti-zzz' },
+  { k: 'headache',    l: 'Headache',       icon: 'ti-mood-puzzled' },
+  { k: 'jitters',     l: 'Jitters',        icon: 'ti-activity' },
+  { k: 'dryMouth',    l: 'Dry mouth',      icon: 'ti-droplet-off' },
+  { k: 'moodDip',     l: 'Mood dip',       icon: 'ti-mood-sad' },
+  { k: 'heartRacing', l: 'Heart racing',   icon: 'ti-heart-rate-monitor' },
+  { k: 'nausea',      l: 'Nausea',         icon: 'ti-stomach' },
+];
+
+const SEVERITY = [
+  { k: 'none',     l: 'None',     color: '#9aa39c' },
+  { k: 'mild',     l: 'Mild',     color: '#7fb89a' },
+  { k: 'moderate', l: 'Moderate', color: '#e0a96d' },
+  { k: 'severe',   l: 'Severe',   color: '#d97a7a' },
+];
+
+const TITRATION_MOODS = [
+  { k: 1, l: 'Awful',  icon: 'ti-mood-sad' },
+  { k: 2, l: 'Low',    icon: 'ti-mood-empty' },
+  { k: 3, l: 'OK',     icon: 'ti-mood-neutral' },
+  { k: 4, l: 'Good',   icon: 'ti-mood-smile' },
+  { k: 5, l: 'Great',  icon: 'ti-mood-happy' },
+];
+
 // ─── Main router ──────────────────────────────────────────
 export function renderNow() {
   setTopbar('Now', 'What do I do next?');
 
   switch (state.nowView) {
-    case 'stuck':         return renderStuck();
-    case 'stuckResponse': return renderStuckResponse();
-    case 'smaller':       return renderSmaller();
-    case 'bodyDouble':    return renderBodyDouble();
-    case 'timerSetup':    return renderTimerSetup();
-    case 'timer':         return renderTimerActive();
-    case 'timerEnd':      return renderTimerEnd();
-    case 'aiSteps':       return renderAiSteps();
-    default:              return renderMain();
+    case 'stuck':            return renderStuck();
+    case 'stuckResponse':    return renderStuckResponse();
+    case 'smaller':          return renderSmaller();
+    case 'bodyDouble':       return renderBodyDouble();
+    case 'timerSetup':       return renderTimerSetup();
+    case 'timer':            return renderTimerActive();
+    case 'timerEnd':         return renderTimerEnd();
+    case 'aiSteps':          return renderAiSteps();
+    case 'titration':        return renderTitrationHub();
+    case 'titrationLog':     return renderTitrationLog();
+    case 'titrationHistory': return renderTitrationHistory();
+    case 'titrationChart':   return renderTitrationChart();
+    case 'titrationExport':  return renderTitrationExport();
+    default:                 return renderMain();
   }
 }
 
@@ -159,6 +195,7 @@ function renderMain() {
         <button class="btn primary" onclick="go('today')"><i class="ti ti-sun"></i> Back to Today</button>
         <button class="btn" onclick="go('plan')"><i class="ti ti-plus"></i> Add something</button>
         <button class="btn sky" onclick="go('reset')"><i class="ti ti-refresh"></i> Take a recovery moment</button>
+        <button class="btn lavender" onclick="nowSetView('titration')"><i class="ti ti-pill"></i> Titration log</button>
       </div>`;
     return;
   }
@@ -202,6 +239,11 @@ function renderMain() {
       </button>
       <button class="btn peach" onclick="go('reset')">
         <i class="ti ti-refresh"></i> I need a reset first
+      </button>
+
+      <!-- Titration tracker entry point -->
+      <button class="btn lavender" onclick="nowSetView('titration')">
+        <i class="ti ti-pill"></i> Titration log${state.titrationEntries.length > 0 ? ` · ${state.titrationEntries.length} entries` : ''}
       </button>
 
       <div class="section-label">Next up</div>
@@ -490,6 +532,582 @@ function renderAiStepsView() {
     </div>`;
 }
 
+// ═══════════════════════════════════════════════════════════
+// TITRATION TRACKER
+// ═══════════════════════════════════════════════════════════
+
+// ─── Helpers ─────────────────────────────────────────────
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function streakDays() {
+  if (state.titrationEntries.length === 0) return 0;
+  const dates = [...new Set(state.titrationEntries.map(e => e.dateISO))].sort().reverse();
+  let streak = 0;
+  let cursor = new Date();
+  for (const d of dates) {
+    const cursorISO = cursor.toISOString().slice(0, 10);
+    if (d === cursorISO) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function trendArrow(values) {
+  if (!values || values.length < 2) return { icon: 'ti-minus', color: 'var(--text-muted)', label: 'stable' };
+  const recent = values.slice(-3).filter(v => v != null);
+  const earlier = values.slice(-6, -3).filter(v => v != null);
+  if (recent.length === 0 || earlier.length === 0) return { icon: 'ti-minus', color: 'var(--text-muted)', label: 'stable' };
+  const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const earlierAvg = earlier.reduce((a, b) => a + b, 0) / earlier.length;
+  const diff = recentAvg - earlierAvg;
+  const pct = earlierAvg ? (diff / earlierAvg) * 100 : 0;
+  if (Math.abs(pct) < 3) return { icon: 'ti-minus', color: 'var(--teal)', label: 'stable' };
+  if (pct > 0) return { icon: 'ti-trending-up', color: 'var(--amber)', label: 'up' };
+  return { icon: 'ti-trending-down', color: 'var(--sky)', label: 'down' };
+}
+
+function severityColor(sev) {
+  const s = SEVERITY.find(x => x.k === sev);
+  return s ? s.color : '#9aa39c';
+}
+
+// ─── Titration hub ───────────────────────────────────────
+function renderTitrationHub() {
+  const entries = state.titrationEntries;
+  const count = entries.length;
+  const streak = streakDays();
+
+  // Trend calculations
+  const bpSysVals = entries.map(e => e.bp_sys).filter(v => v != null);
+  const hrVals    = entries.map(e => e.hr).filter(v => v != null);
+  const wtVals    = entries.map(e => e.weight).filter(v => v != null);
+  const bpTrend = trendArrow(bpSysVals);
+  const hrTrend = trendArrow(hrVals);
+  const wtTrend = trendArrow(wtVals);
+
+  const last = entries[entries.length - 1];
+
+  document.getElementById('content').innerHTML = `
+    <div class="screen">
+      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('main')">
+        <i class="ti ti-arrow-left"></i> Back to Now
+      </button>
+
+      <div class="card lavender">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <i class="ti ti-pill" style="font-size:28px;color:var(--lavender);flex-shrink:0"></i>
+          <div style="flex:1">
+            <div class="card-label">Titration tracker</div>
+            <div class="card-main" style="font-size:17px">Your dose-finding companion</div>
+            <div class="card-sub" style="margin-top:6px;line-height:1.6">
+              Log what your body and brain are telling you. Honest data helps your prescriber adjust faster.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${count === 0 ? `
+        <div class="notice blue" style="text-align:center;padding:1.25rem">
+          <i class="ti ti-clipboard-plus" style="font-size:28px;color:var(--sky);display:block;margin-bottom:8px"></i>
+          <strong>No entries yet.</strong><br>
+          Start logging today. Even a quick entry helps build the picture.
+        </div>
+      ` : `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div class="card teal" style="padding:1rem;text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--teal-deep);line-height:1">${streak}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">day streak</div>
+          </div>
+          <div class="card sky" style="padding:1rem;text-align:center">
+            <div style="font-size:28px;font-weight:700;color:var(--sky-deep, var(--sky));line-height:1">${count}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">total entries</div>
+          </div>
+        </div>
+
+        ${last ? `
+          <div class="section-label">Last entry · ${formatDate(last.dateISO)} at ${last.time || '—'}</div>
+          <div class="card" style="padding:0.85rem 1.25rem">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">BP</div>
+                <div style="font-size:16px;font-weight:700;margin-top:2px">${last.bp_sys != null && last.bp_dia != null ? `${last.bp_sys}/${last.bp_dia}` : '—'}</div>
+                <i class="ti ${bpTrend.icon}" style="font-size:14px;color:${bpTrend.color};margin-top:2px"></i>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">HR</div>
+                <div style="font-size:16px;font-weight:700;margin-top:2px">${last.hr != null ? last.hr : '—'}</div>
+                <i class="ti ${hrTrend.icon}" style="font-size:14px;color:${hrTrend.color};margin-top:2px"></i>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Weight</div>
+                <div style="font-size:16px;font-weight:700;margin-top:2px">${last.weight != null ? last.weight : '—'}</div>
+                <i class="ti ${wtTrend.icon}" style="font-size:14px;color:${wtTrend.color};margin-top:2px"></i>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      `}
+
+      <button class="btn primary" onclick="titrationStartLog()">
+        <i class="ti ti-clipboard-plus"></i> Log new entry
+      </button>
+
+      ${count > 0 ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <button class="btn sky" style="margin:0" onclick="nowSetView('titrationHistory')">
+            <i class="ti ti-history"></i> History
+          </button>
+          <button class="btn teal" style="margin:0" onclick="nowSetView('titrationChart')">
+            <i class="ti ti-chart-line"></i> Trends
+          </button>
+        </div>
+        <button class="btn amber-btn" onclick="nowSetView('titrationExport')">
+          <i class="ti ti-file-export"></i> Export for prescriber
+        </button>
+      ` : ''}
+
+      <div class="notice green" style="margin-top:1.25rem">
+        <strong>Why log?</strong> Memory fades between appointments. A few seconds a day gives your prescriber the evidence they need to get your dose right faster.
+      </div>
+    </div>`;
+}
+
+// ─── Titration log entry form ────────────────────────────
+function renderTitrationLog() {
+  if (!state.titrationDraft) {
+    state.titrationDraft = {
+      id: Date.now(),
+      dateISO: todayISO(),
+      time: nowTime(),
+      dose: '',
+      bp_sys: null,
+      bp_dia: null,
+      hr: null,
+      weight: null,
+      mood: null,
+      sideEffects: {},
+      notes: '',
+    };
+    SIDE_EFFECTS.forEach(se => { state.titrationDraft.sideEffects[se.k] = 'none'; });
+  }
+  const d = state.titrationDraft;
+
+  document.getElementById('content').innerHTML = `
+    <div class="screen">
+      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="titrationCancelLog()">
+        <i class="ti ti-arrow-left"></i> Cancel
+      </button>
+
+      <div class="card lavender">
+        <div class="card-label">New titration entry</div>
+        <div class="card-main" style="font-size:16px">${formatDate(d.dateISO)}</div>
+        <div class="card-sub">Fill what you can. Skip anything you do not have right now.</div>
+      </div>
+
+      <!-- Date & Time -->
+      <div class="section-label"><i class="ti ti-calendar" style="color:var(--lavender);font-size:14px"></i> When</div>
+      <div class="card" style="padding:1rem 1.25rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Date</label>
+            <input type="date" id="t-date" value="${d.dateISO}" onchange="titrationField('dateISO', this.value)"
+              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Time</label>
+            <input type="time" id="t-time" value="${d.time}" onchange="titrationField('time', this.value)"
+              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Dose -->
+      <div class="section-label"><i class="ti ti-pill" style="color:var(--lavender);font-size:14px"></i> Dose</div>
+      <div class="card" style="padding:1rem 1.25rem">
+        <input type="text" placeholder="e.g. Elvanse 30mg, Concerta 36mg" value="${d.dose || ''}"
+          oninput="titrationField('dose', this.value)"
+          style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;background:var(--bg-card);color:var(--text-primary)">
+      </div>
+
+      <!-- Vitals -->
+      <div class="section-label"><i class="ti ti-heart-rate-monitor" style="color:var(--teal);font-size:14px"></i> Vitals</div>
+      <div class="card" style="padding:1rem 1.25rem">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Blood pressure</label>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+              <input type="number" placeholder="120" value="${d.bp_sys ?? ''}" min="50" max="250"
+                oninput="titrationField('bp_sys', this.value ? parseInt(this.value) : null)"
+                style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;background:var(--bg-card);color:var(--text-primary)">
+              <span style="color:var(--text-muted);font-weight:700">/</span>
+              <input type="number" placeholder="80" value="${d.bp_dia ?? ''}" min="30" max="150"
+                oninput="titrationField('bp_dia', this.value ? parseInt(this.value) : null)"
+                style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;background:var(--bg-card);color:var(--text-primary)">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Heart rate</label>
+            <input type="number" placeholder="bpm" value="${d.hr ?? ''}" min="30" max="250"
+              oninput="titrationField('hr', this.value ? parseInt(this.value) : null)"
+              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Weight</label>
+            <input type="number" placeholder="kg" value="${d.weight ?? ''}" min="20" max="300" step="0.1"
+              oninput="titrationField('weight', this.value ? parseFloat(this.value) : null)"
+              style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;text-align:center;margin-top:4px;background:var(--bg-card);color:var(--text-primary)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Mood -->
+      <div class="section-label"><i class="ti ti-mood-smile" style="color:var(--sky);font-size:14px"></i> Mood today</div>
+      <div class="card" style="padding:0.85rem 1rem">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+          ${TITRATION_MOODS.map(m => `
+            <button onclick="titrationField('mood', ${m.k})"
+              style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;
+                     border:2px solid ${d.mood === m.k ? 'var(--sky)' : 'var(--border)'};
+                     background:${d.mood === m.k ? 'var(--sky-l)' : 'var(--bg-card)'};
+                     border-radius:var(--r-md);cursor:pointer;font-family:var(--font);
+                     color:var(--text-primary)">
+              <i class="ti ${m.icon}" style="font-size:22px;color:${d.mood === m.k ? 'var(--sky-d, var(--sky))' : 'var(--text-secondary)'}"></i>
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px">${m.l}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Side effects -->
+      <div class="section-label"><i class="ti ti-alert-circle" style="color:var(--amber);font-size:14px"></i> Side effects</div>
+      <div class="notice blue" style="margin-bottom:0.85rem;font-size:13px">
+        Tap to set severity. Default is none — only change what you noticed.
+      </div>
+      <div class="card" style="padding:0.5rem 1rem">
+        ${SIDE_EFFECTS.map(se => `
+          <div style="padding:10px 0;border-bottom:1.5px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <i class="ti ${se.icon}" style="font-size:18px;color:var(--text-secondary);flex-shrink:0"></i>
+              <div style="font-size:14px;font-weight:700;flex:1">${se.l}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
+              ${SEVERITY.map(sev => {
+                const isSelected = d.sideEffects[se.k] === sev.k;
+                return `
+                  <button onclick="titrationSetSideEffect('${se.k}', '${sev.k}')"
+                    style="padding:6px 4px;
+                           border:1.5px solid ${isSelected ? sev.color : 'var(--border)'};
+                           background:${isSelected ? sev.color : 'var(--bg-card)'};
+                           color:${isSelected ? '#fff' : 'var(--text-secondary)'};
+                           border-radius:var(--r-pill);cursor:pointer;font-family:var(--font);
+                           font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px">
+                    ${sev.l}
+                  </button>`;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Notes -->
+      <div class="section-label"><i class="ti ti-note" style="color:var(--peach);font-size:14px"></i> Other notes</div>
+      <div class="card" style="padding:1rem 1.25rem">
+        <textarea placeholder="Anything else worth recording — other side effects, what helped, what was hard..."
+          oninput="titrationField('notes', this.value)"
+          style="width:100%;min-height:80px;padding:10px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:var(--font);font-size:14px;resize:vertical;background:var(--bg-card);color:var(--text-primary)">${d.notes || ''}</textarea>
+      </div>
+
+      <button class="btn primary" style="margin-top:1rem" onclick="titrationSaveLog()">
+        <i class="ti ti-check"></i> Save entry
+      </button>
+      <button class="btn" onclick="titrationCancelLog()">
+        <i class="ti ti-x"></i> Cancel
+      </button>
+    </div>`;
+}
+
+// ─── Titration history ───────────────────────────────────
+function renderTitrationHistory() {
+  const entries = [...state.titrationEntries].sort((a, b) => {
+    if (a.dateISO !== b.dateISO) return b.dateISO.localeCompare(a.dateISO);
+    return (b.time || '').localeCompare(a.time || '');
+  });
+
+  document.getElementById('content').innerHTML = `
+    <div class="screen">
+      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
+        <i class="ti ti-arrow-left"></i> Back
+      </button>
+
+      <div class="card sky">
+        <div class="card-label">History</div>
+        <div class="card-main" style="font-size:16px">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</div>
+        <div class="card-sub">Newest first. Tap any entry to delete it.</div>
+      </div>
+
+      ${entries.length === 0 ? `
+        <div class="notice blue" style="text-align:center;padding:1.5rem">
+          No entries yet. Log your first one to see it here.
+        </div>
+      ` : entries.map(e => {
+        const flagged = Object.values(e.sideEffects || {}).filter(s => s === 'moderate' || s === 'severe').length;
+        const mood = TITRATION_MOODS.find(m => m.k === e.mood);
+        return `
+          <div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+              <div>
+                <div style="font-size:15px;font-weight:700">${formatDate(e.dateISO)}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${e.time || '—'}${e.dose ? ' · ' + e.dose : ''}</div>
+              </div>
+              <button onclick="titrationDelete(${e.id})"
+                style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px"
+                aria-label="Delete entry">
+                <i class="ti ti-trash" style="font-size:16px"></i>
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px 0;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);margin-bottom:8px">
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">BP</div>
+                <div style="font-size:13px;font-weight:700;margin-top:2px">${e.bp_sys != null && e.bp_dia != null ? `${e.bp_sys}/${e.bp_dia}` : '—'}</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">HR</div>
+                <div style="font-size:13px;font-weight:700;margin-top:2px">${e.hr ?? '—'}</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Weight</div>
+                <div style="font-size:13px;font-weight:700;margin-top:2px">${e.weight ?? '—'}</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Mood</div>
+                <div style="font-size:13px;font-weight:700;margin-top:2px">${mood ? mood.l : '—'}</div>
+              </div>
+            </div>
+            ${flagged > 0 ? `
+              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+                ${SIDE_EFFECTS.filter(se => {
+                  const s = e.sideEffects?.[se.k];
+                  return s === 'moderate' || s === 'severe';
+                }).map(se => {
+                  const sev = e.sideEffects[se.k];
+                  return `<span style="font-size:11px;padding:3px 8px;border-radius:var(--r-pill);background:${severityColor(sev)};color:#fff;font-weight:700">${se.l} · ${sev}</span>`;
+                }).join('')}
+              </div>
+            ` : ''}
+            ${e.notes ? `
+              <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;font-style:italic">"${e.notes}"</div>
+            ` : ''}
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ─── Titration chart ─────────────────────────────────────
+function renderTitrationChart() {
+  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+
+  if (entries.length < 2) {
+    document.getElementById('content').innerHTML = `
+      <div class="screen">
+        <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
+          <i class="ti ti-arrow-left"></i> Back
+        </button>
+        <div class="notice blue" style="text-align:center;padding:1.5rem">
+          <i class="ti ti-chart-line" style="font-size:28px;color:var(--sky);display:block;margin-bottom:8px"></i>
+          <strong>Need at least 2 entries for trends.</strong><br>
+          Keep logging — patterns will appear once you have a few days of data.
+        </div>
+        <button class="btn primary" onclick="titrationStartLog()">
+          <i class="ti ti-clipboard-plus"></i> Log new entry
+        </button>
+      </div>`;
+    return;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <div class="screen">
+      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
+        <i class="ti ti-arrow-left"></i> Back
+      </button>
+
+      <div class="card teal">
+        <div class="card-label">Trends</div>
+        <div class="card-main" style="font-size:16px">Last ${Math.min(entries.length, 14)} entries</div>
+        <div class="card-sub">Each point is one entry. Hover or tap for details.</div>
+      </div>
+
+      ${renderSparkline(entries, 'Blood pressure (systolic)', 'bp_sys', 'teal', 80, 180)}
+      ${renderSparkline(entries, 'Blood pressure (diastolic)', 'bp_dia', 'sky', 50, 110)}
+      ${renderSparkline(entries, 'Heart rate', 'hr', 'amber', 50, 140)}
+      ${renderSparkline(entries, 'Weight', 'weight', 'lavender', null, null)}
+      ${renderSparkline(entries, 'Mood (1-5)', 'mood', 'peach', 1, 5)}
+
+      <div class="notice green" style="margin-top:1rem">
+        <strong>What to share with your prescriber:</strong> any clear upward or downward trends, especially in BP, HR, or weight. Mood dips and side-effect spikes also matter.
+      </div>
+    </div>`;
+}
+
+function renderSparkline(entries, label, field, color, minOverride, maxOverride) {
+  const data = entries.slice(-14).map(e => ({ x: e.dateISO, y: e[field] }));
+  const validData = data.filter(d => d.y != null);
+  if (validData.length < 2) {
+    return `
+      <div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
+        <div class="card-label">${label}</div>
+        <div style="font-size:12px;color:var(--text-muted);padding:8px 0">Not enough data yet.</div>
+      </div>`;
+  }
+
+  const values = validData.map(d => d.y);
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  const min = minOverride != null ? Math.min(minOverride, dataMin) : dataMin;
+  const max = maxOverride != null ? Math.max(maxOverride, dataMax) : dataMax;
+  const range = max - min || 1;
+
+  const w = 300;
+  const h = 60;
+  const pad = 4;
+  const stepX = (w - pad * 2) / Math.max(1, validData.length - 1);
+
+  const points = validData.map((d, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - ((d.y - min) / range) * (h - pad * 2);
+    return { x, y, val: d.y, date: d.x };
+  });
+
+  const path = points.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
+  const areaPath = `${path} L${points[points.length - 1].x},${h - pad} L${points[0].x},${h - pad} Z`;
+
+  const latest = points[points.length - 1];
+  const first  = points[0];
+  const change = latest.val - first.val;
+  const changeStr = change > 0 ? `+${change.toFixed(field === 'weight' ? 1 : 0)}` : change.toFixed(field === 'weight' ? 1 : 0);
+
+  return `
+    <div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+        <div class="card-label">${label}</div>
+        <div style="display:flex;gap:10px;align-items:baseline">
+          <span style="font-size:18px;font-weight:700;color:var(--${color});line-height:1">${latest.val}${field === 'weight' ? '' : ''}</span>
+          <span style="font-size:11px;color:var(--text-muted)">${change >= 0 ? '↑' : '↓'} ${changeStr}</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:60px;overflow:visible">
+        <path d="${areaPath}" fill="var(--${color}-l)" opacity="0.5"/>
+        <path d="${path}" fill="none" stroke="var(--${color})" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${points.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3" fill="var(--${color})"><title>${p.date}: ${p.val}</title></circle>`).join('')}
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
+        <span>${formatDate(validData[0].x)}</span>
+        <span>${formatDate(validData[validData.length - 1].x)}</span>
+      </div>
+    </div>`;
+}
+
+// ─── Titration export ────────────────────────────────────
+function renderTitrationExport() {
+  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+
+  document.getElementById('content').innerHTML = `
+    <div class="screen">
+      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="nowSetView('titration')">
+        <i class="ti ti-arrow-left"></i> Back
+      </button>
+
+      <div class="card amber">
+        <div class="card-label">Export for prescriber</div>
+        <div class="card-main" style="font-size:16px">${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</div>
+        <div class="card-sub">Copy a summary, or download as CSV to email or print.</div>
+      </div>
+
+      <button class="btn primary" onclick="titrationCopyText(this)">
+        <i class="ti ti-copy"></i> Copy summary to clipboard
+      </button>
+      <button class="btn sky" onclick="titrationDownloadCSV()">
+        <i class="ti ti-download"></i> Download CSV
+      </button>
+      <button class="btn" onclick="titrationPrintView()">
+        <i class="ti ti-printer"></i> Print
+      </button>
+
+      <div class="section-label">Preview</div>
+      <div class="card" style="padding:1rem 1.25rem;font-family:var(--font-mono, monospace);font-size:11px;line-height:1.6;white-space:pre-wrap;overflow-x:auto">${buildExportText(entries)}</div>
+    </div>`;
+}
+
+function buildExportText(entries) {
+  let out = `BOWLINE — TITRATION LOG\n`;
+  out += `Generated: ${new Date().toLocaleString('en-GB')}\n`;
+  out += `Entries: ${entries.length}\n`;
+  out += `${'─'.repeat(50)}\n\n`;
+
+  entries.forEach(e => {
+    out += `${formatDate(e.dateISO)} · ${e.time || '—'}\n`;
+    if (e.dose) out += `  Dose: ${e.dose}\n`;
+    if (e.bp_sys != null && e.bp_dia != null) out += `  BP: ${e.bp_sys}/${e.bp_dia} mmHg\n`;
+    if (e.hr != null) out += `  HR: ${e.hr} bpm\n`;
+    if (e.weight != null) out += `  Weight: ${e.weight} kg\n`;
+    if (e.mood != null) {
+      const mood = TITRATION_MOODS.find(m => m.k === e.mood);
+      out += `  Mood: ${mood ? mood.l : e.mood}/5\n`;
+    }
+    const flagged = SIDE_EFFECTS.filter(se => {
+      const s = e.sideEffects?.[se.k];
+      return s && s !== 'none';
+    });
+    if (flagged.length > 0) {
+      out += `  Side effects:\n`;
+      flagged.forEach(se => {
+        out += `    - ${se.l}: ${e.sideEffects[se.k]}\n`;
+      });
+    }
+    if (e.notes) out += `  Notes: ${e.notes}\n`;
+    out += '\n';
+  });
+
+  return out;
+}
+
+function buildCSV(entries) {
+  const headers = [
+    'Date', 'Time', 'Dose', 'BP_Systolic', 'BP_Diastolic', 'HR', 'Weight', 'Mood(1-5)',
+    ...SIDE_EFFECTS.map(se => `SE_${se.k}`),
+    'Notes',
+  ];
+  const rows = entries.map(e => [
+    e.dateISO,
+    e.time || '',
+    e.dose || '',
+    e.bp_sys ?? '',
+    e.bp_dia ?? '',
+    e.hr ?? '',
+    e.weight ?? '',
+    e.mood ?? '',
+    ...SIDE_EFFECTS.map(se => e.sideEffects?.[se.k] || 'none'),
+    (e.notes || '').replace(/"/g, '""'),
+  ]);
+  return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+}
+
 // ─── Window handlers ──────────────────────────────────────
 window.nowSetView = function (v) {
   state.nowView = v;
@@ -588,6 +1206,84 @@ window.nowOpenReset = function (resetKey) {
   state.resetView  = 'flow';
   state.resetStep  = 0;
   go('reset');
+};
+
+// ─── Titration window handlers ───────────────────────────
+window.titrationStartLog = function () {
+  state.titrationDraft = null; // force fresh draft
+  state.nowView = 'titrationLog';
+  renderNow();
+};
+
+window.titrationCancelLog = function () {
+  state.titrationDraft = null;
+  state.nowView = 'titration';
+  renderNow();
+};
+
+window.titrationField = function (key, value) {
+  if (!state.titrationDraft) return;
+  state.titrationDraft[key] = value;
+  // Do not re-render — keep input focus
+};
+
+window.titrationSetSideEffect = function (effectKey, severity) {
+  if (!state.titrationDraft) return;
+  state.titrationDraft.sideEffects[effectKey] = severity;
+  renderNow();
+};
+
+window.titrationSaveLog = function () {
+  const d = state.titrationDraft;
+  if (!d) return;
+  // Read latest values from inputs (covers fields that did not re-render)
+  state.titrationEntries.push({ ...d });
+  state.titrationDraft = null;
+  state.nowView = 'titration';
+  renderNow();
+};
+
+window.titrationDelete = function (id) {
+  if (!confirm('Delete this entry? This cannot be undone.')) return;
+  state.titrationEntries = state.titrationEntries.filter(e => e.id !== id);
+  renderNow();
+};
+
+window.titrationCopyText = function (btn) {
+  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+  const text = buildExportText(entries);
+  navigator.clipboard.writeText(text).catch(() => {});
+  const original = btn.innerHTML;
+  btn.innerHTML = '<i class="ti ti-check"></i> Copied to clipboard';
+  setTimeout(() => { btn.innerHTML = original; }, 1800);
+};
+
+window.titrationDownloadCSV = function () {
+  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+  const csv = buildCSV(entries);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bowline-titration-${todayISO()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.titrationPrintView = function () {
+  const entries = [...state.titrationEntries].sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+  const text = buildExportText(entries);
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`
+    <html><head><title>Bowline Titration Log</title>
+    <style>body{font-family:system-ui,sans-serif;padding:24px;max-width:720px;margin:0 auto;line-height:1.5}pre{white-space:pre-wrap;font-size:12px}</style>
+    </head><body><h1>Bowline — Titration Log</h1><pre>${text.replace(/</g, '&lt;')}</pre></body></html>
+  `);
+  win.document.close();
+  setTimeout(() => win.print(), 250);
 };
 
 register('now', renderNow);
