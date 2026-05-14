@@ -10,6 +10,7 @@ if (!state._originalTasks) state._originalTasks = null;
 if (state.essentialsMode === undefined) state.essentialsMode = false;
 if (!state.moodLog) state.moodLog = [];
 
+// Initialize journal draft state
 if (!state.journalDraft) {
   state.journalDraft = {
     topic: '',
@@ -158,16 +159,6 @@ function renderMoodPicker() {
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
       
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
-        <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
-          <i class="ti ti-sun" style="font-size: 24px;"></i>
-        </div>
-        <div>
-          <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Today</div>
-          <div style="font-size: 15px; color: #64748b;">A calmer way through your day</div>
-        </div>
-      </div>
-
       ${renderSectionHeader('HOW ARE YOU STARTING TODAY?')}
 
       <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
@@ -363,36 +354,36 @@ function renderJournal() {
       <!-- Section 1: The Event -->
       <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid #10b981; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
         <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">What event or topic are you reflecting on?</div>
-        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">Give a brief description. You don’t need to give all the details, focus on the event itself. Remember to keep things confidential.</div>
+        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">Give a brief description. You don’t need to give all the details, but rather focus on the event itself.<br><br>Too broad a focus can make it difficult to give the topic the attention it needs and might be hard to give direction to your reflection, especially if you are reflecting in a group setting and everyone will want to make input.<br><br>Remember to keep things confidential.</div>
         <textarea onblur="updateJournal('topic', this.value)" placeholder="Start typing here..." style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.topic}</textarea>
       </div>
 
       <!-- Section 2: Feelings -->
       <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
         <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">Would you call this a positive or challenging event?</div>
-        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">Even when things go right, they can still be challenging. What feelings would you use to describe the event?</div>
+        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">What feelings would you use to describe the event?<br><br>Even when things go right, they can still be challenging. Think about the outcomes of this event and whether you feel they could have been improved.</div>
         <textarea onblur="updateJournal('feelings', this.value)" placeholder="I felt..." style="width: 100%; min-height: 80px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.feelings}</textarea>
       </div>
 
       <!-- Section 3: What happened -->
       <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid #0ea5e9; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
         <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">What happened?</div>
-        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">How did you respond? How did your team respond? What did you feel during the event? What did you feel afterwards?</div>
+        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">Give a brief description of the event. How did you respond? How did your team respond? What did you feel during the event? What did you feel afterwards?</div>
         <textarea onblur="updateJournal('happened', this.value)" placeholder="During the event..." style="width: 100%; min-height: 120px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.happened}</textarea>
       </div>
 
       <!-- Section 4: Looking Back -->
       <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid #8b5cf6; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
         <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">Looking back</div>
-        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">Are you satisfied with how you responded? Do you think you worked effectively with colleagues? Did you have all the support you needed?</div>
-        <textarea onblur="updateJournal('lookingBack', this.value)" placeholder="Looking back, I..." style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.lookingBack}</textarea>
+        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">Are you satisfied with how you responded? If not, why not? Do you think you worked effectively with your colleagues? If not, what would help effective work in the future?<br><br>Did you had all the support you needed? If not, what would have helped? If in a group, was the group satisfied with how it responded? If not, why not? Did the group work as an effective team?</div>
+        <textarea onblur="updateJournal('lookingBack', this.value)" placeholder="Looking back, I..." style="width: 100%; min-height: 120px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.lookingBack}</textarea>
       </div>
 
       <!-- Section 5: Looking Forward -->
       <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid #f43f5e; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
         <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">Looking forward</div>
-        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">If there is a similar event in future, would you do anything differently? What did you learn? Are there lessons to be learned for your team or policies?</div>
-        <textarea onblur="updateJournal('lookingForward', this.value)" placeholder="In the future..." style="width: 100%; min-height: 120px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.lookingForward}</textarea>
+        <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;">If there is a similar event in the future, would you do anything differently? What did you learn from this experience and/or your reflection on it? How will this learning improve your practice? How will this learning be used to the benefit of service users?<br><br>Are there lessons to be learned for your team/ your colleagues/ the policies or systems you follow? Did the things your learned after this event help you achieve any of your development objectives? Did this event help you identify new learning objectives?</div>
+        <textarea onblur="updateJournal('lookingForward', this.value)" placeholder="In the future..." style="width: 100%; min-height: 150px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; color: #334155; resize: vertical; box-sizing: border-box; outline: none;">${d.lookingForward}</textarea>
       </div>
 
       <!-- Actions -->
