@@ -325,8 +325,8 @@ function actionGridStyles() {
       .grid-action-btn {
         background: #fff;
         border: 1.5px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 16px 8px;
+        border-radius: 10px;
+        padding: 14px 4px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1385,7 +1385,3 @@ window.titrationPrintView = function () {
 };
 
 register('now', renderNow);
-
-I want the same UI / UX on this page as the others to match 
-
-There is a file you can reference named "image_894056.png". Refer to this file by its name verbatim.
