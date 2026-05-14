@@ -5,19 +5,25 @@ import { register, setTopbar, go } from '../../app/router.js';
 window.go = go;
 
 // ─── Local state ──────────────────────────────────────────
-if (!state.resetView)   state.resetView   = 'picker';   // picker | flow | breathing | complete | journal
+if (!state.resetView)     state.resetView     = 'picker';   // picker | category | flow | breathing | complete
+if (!state.resetCategory) state.resetCategory = null;       // sensory | cognitive | emotional | recovery | unknown
 if (state.resetStep === undefined) state.resetStep = 0;
-if (!state.resetOutcome) state.resetOutcome = null;
+if (!state.resetOutcome)  state.resetOutcome  = null;
+
+// ─── Category Definitions ─────────────────────────────────
+const CATEGORIES = [
+  { k: 'sensory',   l: 'Sensory',   sub: 'Overwhelm, understimulation',        icon: 'ti-ear',          keys: ['over', 'under'],                  color: 'peach' },
+  { k: 'cognitive', l: 'Cognitive', sub: 'Task paralysis, decisions, changes', icon: 'ti-brain',        keys: ['start', 'decision', 'change'],    color: 'lavender' },
+  { k: 'emotional', l: 'Emotional', sub: 'Anxiety, anger, meltdowns',          icon: 'ti-heart',        keys: ['anxiety', 'anger', 'meltdown'],   color: 'sky' },
+  { k: 'recovery',  l: 'Recovery',  sub: 'Shutdowns, burnout, pain',           icon: 'ti-battery-1',    keys: ['shutdown', 'social', 'pain'],     color: 'teal' },
+  { k: 'unknown',   l: 'Not sure',  sub: 'Something feels off',                icon: 'ti-question-mark',keys: ['unknown'],                        color: 'amber' }
+];
 
 // ─── Reset definitions ────────────────────────────────────
 const RESETS = [
-  // ── 1. Overstimulation ─────────────────────────────────
+  // ── SENSORY ────────────────────────────────────────────
   {
-    k: 'over',
-    icon: 'ti-volume-3',
-    l: 'Too much input',
-    sub: 'Overstimulated, sensory overload',
-    color: 'peach',
+    k: 'over', icon: 'ti-volume-3', l: 'Too much input', sub: 'Overstimulated, sensory overload', color: 'peach',
     intro: "When your senses are full, your thinking brain shuts down. The fix is not willpower — it's reducing input.",
     steps: [
       { type: 'action',    text: 'Move away from the loudest source of noise if you can.', tip: 'Even one room over makes a difference.' },
@@ -30,14 +36,8 @@ const RESETS = [
     ],
     recoveryHint: 'Sensory recovery can take 20–60 minutes. There is no rush.',
   },
-
-  // ── 2. Understimulation ────────────────────────────────
   {
-    k: 'under',
-    icon: 'ti-battery-1',
-    l: 'Too little stimulation',
-    sub: 'Understimulated, flat, restless',
-    color: 'amber',
+    k: 'under', icon: 'ti-battery-1', l: 'Too little stimulation', sub: 'Understimulated, flat, restless', color: 'amber',
     intro: "Understimulated brains can't focus either. They need safe input first — then the task gets possible.",
     steps: [
       { type: 'action',  text: 'Put on familiar music — something with energy you like.', tip: 'Familiar matters more than new.' },
@@ -50,13 +50,9 @@ const RESETS = [
     recoveryHint: "If you're still flat, try a body-double timer — sometimes only structure breaks through.",
   },
 
-  // ── 3. Can't start ─────────────────────────────────────
+  // ── COGNITIVE ──────────────────────────────────────────
   {
-    k: 'start',
-    icon: 'ti-player-pause',
-    l: "Can't start",
-    sub: 'Frozen, task paralysis',
-    color: 'lavender',
+    k: 'start', icon: 'ti-player-pause', l: "Can't start", sub: 'Frozen, task paralysis', color: 'lavender',
     intro: "Freeze is real. It's not laziness. The way out is to shrink the task until your brain accepts it.",
     steps: [
       { type: 'reflect', text: 'What is the smallest possible first step?', detail: 'Not the first real step — the step before the first real step. Opening the email. Putting on shoes. Finding the file.' },
@@ -68,34 +64,21 @@ const RESETS = [
     ],
     recoveryHint: 'Task paralysis often eases once you have momentum. Body doubling helps lock that in.',
   },
-
-  // ── 4. Anxiety spike ───────────────────────────────────
   {
-    k: 'anxiety',
-    icon: 'ti-wind',
-    l: 'Anxiety spike',
-    sub: 'Racing thoughts, tight chest',
-    color: 'sky',
-    intro: "Anxiety adds noise to everything. Reducing the noise is more useful than solving the worry.",
+    k: 'decision', icon: 'ti-brain', l: 'Decision overload', sub: 'Too many choices to make', color: 'lavender',
+    intro: "When every option feels equally important, your brain can't pick. The fix is to remove options, not analyse them.",
     steps: [
-      { type: 'breathing', text: 'Slow exhale × 4', detail: 'Breathe out slowly for 4 counts. The exhale activates your calming nervous system.' },
-      { type: 'action',    text: 'Place your feet flat on the floor.', tip: 'Press down gently. Feel the ground.' },
-      { type: 'reflect',   text: 'Name 3 things you can see right now.', detail: 'Out loud or in your head. Just name them.' },
-      { type: 'reflect',   text: 'What is actually certain right now?', detail: 'Not what might happen. What is true at this moment.' },
-      { type: 'reflect',   text: 'What can wait until later?', detail: 'You do not have to solve everything in this hour.' },
-      { type: 'action',    text: 'Choose one very small action.', tip: 'Drink water. Send one text. Stand up. One thing.' },
-      { type: 'choice',    text: 'Choose what comes next.' },
+      { type: 'reflect', text: 'Pause all decisions for the next 10 minutes.', detail: 'Set the timer mentally. Nothing has to be decided right now.' },
+      { type: 'reflect', text: 'What is the one most urgent thing?', detail: 'Urgent means: there are consequences within hours.' },
+      { type: 'reflect', text: 'Can anything wait 24 hours?', detail: "Be honest — most things can wait. They feel urgent but aren't." },
+      { type: 'action',  text: 'Choose the smallest available option.', tip: "When in doubt, pick the one with the lowest cost." },
+      { type: 'reflect', text: 'Nothing else until that one is done.', detail: 'Decision-making is a finite resource. Spend it on one thing.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
     ],
-    recoveryHint: 'If anxiety is high regularly, talking to your GP or therapist is a valid step.',
+    recoveryHint: 'If decisions stack up regularly, try deciding less — automate, delegate, or just default to your usual choice.',
   },
-
-  // ── 5. Change of plan ──────────────────────────────────
   {
-    k: 'change',
-    icon: 'ti-route-x',
-    l: 'Change of plan',
-    sub: 'Something unexpected happened',
-    color: 'amber',
+    k: 'change', icon: 'ti-route-x', l: 'Change of plan', sub: 'Something unexpected happened', color: 'amber',
     intro: "Change of plan is hard for neurodivergent brains. The plan in your head needs time to be replaced — that's a real cost.",
     steps: [
       { type: 'reflect', text: 'Pause. This is allowed.', detail: 'You do not need to immediately adapt. Give yourself a minute.' },
@@ -109,72 +92,37 @@ const RESETS = [
     recoveryHint: 'After a change of plan, your brain may need a recovery buffer. Reduce demands for the next hour.',
   },
 
-  // ── 6. Shutdown ────────────────────────────────────────
+  // ── EMOTIONAL ──────────────────────────────────────────
   {
-    k: 'shutdown',
-    icon: 'ti-moon',
-    l: 'Shutdown',
-    sub: 'Withdrawn, empty, blank',
-    color: 'sky',
-    intro: "Shutdown is when your system protects you by switching off. Pushing through makes it worse. Essentials only.",
+    k: 'anxiety', icon: 'ti-wind', l: 'Anxiety spike', sub: 'Racing thoughts, tight chest', color: 'sky',
+    intro: "Anxiety adds noise to everything. Reducing the noise is more useful than solving the worry.",
     steps: [
-      { type: 'action',  text: 'Drink water — even a few sips.', tip: 'Dehydration deepens shutdown.' },
-      { type: 'action',  text: 'Eat something — anything. Toast, fruit, a snack.', tip: 'Low blood sugar mimics shutdown.' },
-      { type: 'action',  text: 'Lie down or sit somewhere quiet.', tip: 'Lower physical demands.' },
-      { type: 'reflect', text: 'No decisions right now.', detail: 'Decision-making is offline. Do not try to plan.' },
-      { type: 'reflect', text: 'Rest is valid. This is information, not failure.', detail: 'Your body is protecting you. Trust it.' },
-      { type: 'action',  text: 'Return when you are ready — no timeline.', tip: 'Some shutdowns last an hour. Some a day. Both are normal.' },
-      { type: 'choice',  text: 'Choose what comes next.' },
+      { type: 'breathing', text: 'Slow exhale × 4', detail: 'Breathe out slowly for 4 counts. The exhale activates your calming nervous system.' },
+      { type: 'action',    text: 'Place your feet flat on the floor.', tip: 'Press down gently. Feel the ground.' },
+      { type: 'reflect',   text: 'Name 3 things you can see right now.', detail: 'Out loud or in your head. Just name them.' },
+      { type: 'reflect',   text: 'What is actually certain right now?', detail: 'Not what might happen. What is true at this moment.' },
+      { type: 'reflect',   text: 'What can wait until later?', detail: 'You do not have to solve everything in this hour.' },
+      { type: 'action',    text: 'Choose one very small action.', tip: 'Drink water. Send one text. Stand up. One thing.' },
+      { type: 'choice',    text: 'Choose what comes next.' },
     ],
-    recoveryHint: 'Shutdown recovery can take hours or days. Tell people you need quiet — that is a complete sentence.',
+    recoveryHint: 'If anxiety is high regularly, talking to your GP or therapist is a valid step.',
   },
-
-  // ── 7. Decision overload ───────────────────────────────
   {
-    k: 'decision',
-    icon: 'ti-brain',
-    l: 'Decision overload',
-    sub: 'Too many choices to make',
-    color: 'lavender',
-    intro: "When every option feels equally important, your brain can't pick. The fix is to remove options, not analyse them.",
+    k: 'anger', icon: 'ti-flame', l: 'Anger or frustration', sub: 'Heat building, want to react', color: 'amber',
+    intro: "Anger is data. Something feels wrong or unfair. The aim is to feel it without acting on it before you've cooled.",
     steps: [
-      { type: 'reflect', text: 'Pause all decisions for the next 10 minutes.', detail: 'Set the timer mentally. Nothing has to be decided right now.' },
-      { type: 'reflect', text: 'What is the one most urgent thing?', detail: 'Urgent means: there are consequences within hours.' },
-      { type: 'reflect', text: 'Can anything wait 24 hours?', detail: "Be honest — most things can wait. They feel urgent but aren't." },
-      { type: 'action',  text: 'Choose the smallest available option.', tip: "When in doubt, pick the one with the lowest cost." },
-      { type: 'reflect', text: 'Nothing else until that one is done.', detail: 'Decision-making is a finite resource. Spend it on one thing.' },
-      { type: 'choice',  text: 'Choose what comes next.' },
+      { type: 'action',    text: 'Delay any reply for 10 minutes.', tip: 'No texts, no emails, no Slack. Set the phone down.' },
+      { type: 'breathing', text: 'Slow exhale × 4', detail: 'Out for 6, pause, repeat. Three rounds minimum.' },
+      { type: 'action',    text: 'Move your body — pace, stretch, do 10 jumping jacks.', tip: 'Anger needs a physical outlet.' },
+      { type: 'reflect',   text: 'What specifically is making me angry?', detail: 'One sentence. Be concrete.' },
+      { type: 'reflect',   text: 'Is this about the present, or about something older?', detail: 'Both are valid — just notice which it is.' },
+      { type: 'reflect',   text: 'What would I want to say after I cool down?', detail: 'Not the heated version. The version you would be proud of tomorrow.' },
+      { type: 'choice',    text: 'Choose what comes next.' },
     ],
-    recoveryHint: 'If decisions stack up regularly, try deciding less — automate, delegate, or just default to your usual choice.',
+    recoveryHint: 'Anger that does not pass after a reset may need to be talked through — with a person you trust, or a professional.',
   },
-
-  // ── 8. Social exhaustion ───────────────────────────────
   {
-    k: 'social',
-    icon: 'ti-users',
-    l: 'Social exhaustion',
-    sub: 'After people, before recovery',
-    color: 'teal',
-    intro: "Social interaction costs energy for neurodivergent brains — masking, reading rooms, performing fluency. Recovery is not optional.",
-    steps: [
-      { type: 'action',  text: 'Find a quiet space — alone if possible.', tip: 'Bedroom, bathroom, parked car, an unused room.' },
-      { type: 'action',  text: 'Remove unnecessary stimulation — phone screen off if you can.', tip: 'Even friendly input is still input.' },
-      { type: 'reflect', text: 'Do not reply to anything yet.', detail: 'Messages will wait. You are not being rude.' },
-      { type: 'action',  text: 'Drink water.', tip: 'Always start here.' },
-      { type: 'action',  text: 'Sit or lie down for 10–15 minutes.', tip: 'Static rest. No scrolling.' },
-      { type: 'reflect', text: 'Come back to tasks only when you feel ready.', detail: 'Forcing it now leads to a worse crash later.' },
-      { type: 'choice',  text: 'Choose what comes next.' },
-    ],
-    recoveryHint: 'Social events deserve recovery time built in advance — protect the hour after, every time.',
-  },
-
-  // ── 9. Meltdown risk ───────────────────────────────────
-  {
-    k: 'meltdown',
-    icon: 'ti-bolt',
-    l: 'Meltdown rising',
-    sub: 'About to lose control',
-    color: 'peach',
+    k: 'meltdown', icon: 'ti-bolt', l: 'Meltdown rising', sub: 'About to lose control', color: 'peach',
     intro: "If you can feel a meltdown rising, you still have a small window. The aim is to reduce input fast — not to suppress feelings.",
     steps: [
       { type: 'action',    text: 'Get away from people if you can.', tip: 'Even briefly. A toilet, a corridor, a car.' },
@@ -188,33 +136,37 @@ const RESETS = [
     recoveryHint: 'After a meltdown, give yourself the rest of the day at minimum. Cancel what you can.',
   },
 
-  // ── 10. Anger / frustration ────────────────────────────
+  // ── RECOVERY ───────────────────────────────────────────
   {
-    k: 'anger',
-    icon: 'ti-flame',
-    l: 'Anger or frustration',
-    sub: 'Heat building, want to react',
-    color: 'amber',
-    intro: "Anger is data. Something feels wrong or unfair. The aim is to feel it without acting on it before you've cooled.",
+    k: 'shutdown', icon: 'ti-moon', l: 'Shutdown', sub: 'Withdrawn, empty, blank', color: 'sky',
+    intro: "Shutdown is when your system protects you by switching off. Pushing through makes it worse. Essentials only.",
     steps: [
-      { type: 'action',    text: 'Delay any reply for 10 minutes.', tip: 'No texts, no emails, no Slack. Set the phone down.' },
-      { type: 'breathing', text: 'Slow exhale × 4', detail: 'Out for 6, pause, repeat. Three rounds minimum.' },
-      { type: 'action',    text: 'Move your body — pace, stretch, do 10 jumping jacks.', tip: 'Anger needs a physical outlet.' },
-      { type: 'reflect',   text: 'What specifically is making me angry?', detail: 'One sentence. Be concrete.' },
-      { type: 'reflect',   text: 'Is this about the present, or about something older?', detail: 'Both are valid — just notice which it is.' },
-      { type: 'reflect',   text: 'What would I want to say after I cool down?', detail: 'Not the heated version. The version you would be proud of tomorrow.' },
-      { type: 'choice',    text: 'Choose what comes next.' },
+      { type: 'action',  text: 'Drink water — even a few sips.', tip: 'Dehydration deepens shutdown.' },
+      { type: 'action',  text: 'Eat something — anything. Toast, fruit, a snack.', tip: 'Low blood sugar mimics shutdown.' },
+      { type: 'action',  text: 'Lie down or sit somewhere quiet.', tip: 'Lower physical demands.' },
+      { type: 'reflect', text: 'No decisions right now.', detail: 'Decision-making is offline. Do not try to plan.' },
+      { type: 'reflect', text: 'Rest is valid. This is information, not failure.', detail: 'Your body is protecting you. Trust it.' },
+      { type: 'action',  text: 'Return when you are ready — no timeline.', tip: 'Some shutdowns last an hour. Some a day. Both are normal.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
     ],
-    recoveryHint: 'Anger that does not pass after a reset may need to be talked through — with a person you trust, or a professional.',
+    recoveryHint: 'Shutdown recovery can take hours or days. Tell people you need quiet — that is a complete sentence.',
   },
-
-  // ── 11. Pain / chronic illness ─────────────────────────
   {
-    k: 'pain',
-    icon: 'ti-bandage',
-    l: 'Pain or illness',
-    sub: 'Body is asking for less',
-    color: 'lavender',
+    k: 'social', icon: 'ti-users', l: 'Social exhaustion', sub: 'After people, before recovery', color: 'teal',
+    intro: "Social interaction costs energy for neurodivergent brains — masking, reading rooms, performing fluency. Recovery is not optional.",
+    steps: [
+      { type: 'action',  text: 'Find a quiet space — alone if possible.', tip: 'Bedroom, bathroom, parked car, an unused room.' },
+      { type: 'action',  text: 'Remove unnecessary stimulation — phone screen off if you can.', tip: 'Even friendly input is still input.' },
+      { type: 'reflect', text: 'Do not reply to anything yet.', detail: 'Messages will wait. You are not being rude.' },
+      { type: 'action',  text: 'Drink water.', tip: 'Always start here.' },
+      { type: 'action',  text: 'Sit or lie down for 10–15 minutes.', tip: 'Static rest. No scrolling.' },
+      { type: 'reflect', text: 'Come back to tasks only when you feel ready.', detail: 'Forcing it now leads to a worse crash later.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Social events deserve recovery time built in advance — protect the hour after, every time.',
+  },
+  {
+    k: 'pain', icon: 'ti-bandage', l: 'Pain or illness', sub: 'Body is asking for less', color: 'lavender',
     intro: "Pain and illness reduce capacity — full stop. Today is a smaller-day. The plan must change.",
     steps: [
       { type: 'reflect', text: 'Today is a smaller day. That is allowed.', detail: 'Your capacity is real, not a setting you can change with effort.' },
@@ -228,13 +180,9 @@ const RESETS = [
     recoveryHint: 'Chronic pain deserves chronic accommodation — see your doctor if today is part of a longer pattern.',
   },
 
-  // ── 12. I don't know what's wrong ──────────────────────
+  // ── NOT SURE ───────────────────────────────────────────
   {
-    k: 'unknown',
-    icon: 'ti-question-mark',
-    l: "I don't know what's wrong",
-    sub: 'Something feels off',
-    color: 'sky',
+    k: 'unknown', icon: 'ti-question-mark', l: "I don't know what's wrong", sub: 'Something feels off', color: 'sky',
     intro: "Sometimes the brain just says 'no' and won't say why. That is also valid. Let's check the basics first.",
     steps: [
       { type: 'reflect', text: 'When did you last drink water?', detail: 'If more than 2 hours, drink some now.' },
@@ -258,29 +206,6 @@ const PALETTE = {
   teal:     { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', sub: '#059669', icon: '#10b981', btn: '#059669' }
 };
 
-function renderHeader() {
-  return `
-    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
-      <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
-        <i class="ti ti-refresh" style="font-size: 24px;"></i>
-      </div>
-      <div>
-        <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Reset</div>
-        <div style="font-size: 15px; color: #64748b;">Regulation before action.</div>
-      </div>
-    </div>
-  `;
-}
-
-function renderSectionHeader(title) {
-  return `
-    <div style="display: flex; align-items: center; gap: 12px; margin: 32px 0 16px;">
-      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px;">${title}</div>
-      <div style="flex: 1; height: 1.5px; background: #e2e8f0;"></div>
-    </div>
-  `;
-}
-
 function renderResetButtons(keys) {
   return keys.map(k => {
     const r = RESETS.find(r => r.k === k);
@@ -293,42 +218,70 @@ function renderResetButtons(keys) {
               style="width: 100%; text-align: left; background: ${palette.bg}; border: 1.5px solid ${palette.border}; 
                      border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; 
                      gap: 16px; cursor: pointer; transition: transform 0.1s; font-family: inherit;">
-        <i class="ti ${r.icon}" style="font-size: 24px; color: ${palette.text}; flex-shrink: 0;"></i>
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <i class="ti ${r.icon}" style="font-size: 24px; color: ${palette.text};"></i>
+        </div>
         <div style="flex: 1;">
           <div style="font-size: 15px; font-weight: 700; color: ${palette.text}; margin-bottom: 2px;">${r.l}</div>
           <div style="font-size: 13px; font-weight: 400; color: ${palette.sub}; opacity: 0.9;">${r.sub}</div>
         </div>
+        <i class="ti ti-chevron-right" style="font-size: 20px; color: ${palette.text}; opacity: 0.5;"></i>
       </button>`;
   }).join('');
 }
 
-// ─── Picker view ───────────────────────────────────────────
+// ─── Main Category Picker view ─────────────────────────────
 function renderPicker() {
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
       
-      ${renderHeader()}
-
       <!-- Purple Regulation Notice -->
       <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; margin-bottom: 28px;">
         <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 4px;">Regulation before productivity.</div>
         <div style="font-size: 14px; color: #6d28d9;">You do not need to do everything. What kind of hard is this?</div>
       </div>
 
-      ${renderSectionHeader('SENSORY')}
-      ${renderResetButtons(['over', 'under'])}
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+        ${CATEGORIES.map(c => {
+          const pal = PALETTE[c.color] || PALETTE.lavender;
+          return `
+            <button onclick="openCategory('${c.k}')"
+                    style="width: 100%; text-align: left; background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid ${pal.icon}; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+              <div style="width: 48px; height: 48px; border-radius: 12px; background: ${pal.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="ti ${c.icon}" style="font-size: 24px; color: ${pal.text};"></i>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">${c.l}</div>
+                <div style="font-size: 13px; color: #64748b;">${c.sub}</div>
+              </div>
+              <i class="ti ti-chevron-right" style="font-size: 20px; color: #cbd5e1;"></i>
+            </button>
+          `;
+        }).join('')}
+      </div>
+      
+    </div>
+  `;
+}
 
-      ${renderSectionHeader('COGNITIVE')}
-      ${renderResetButtons(['start', 'decision', 'change'])}
+// ─── Sub-category view ─────────────────────────────────────
+function renderCategoryView() {
+  const cat = CATEGORIES.find(c => c.k === state.resetCategory);
+  if (!cat) { state.resetView = 'picker'; renderReset(); return; }
 
-      ${renderSectionHeader('EMOTIONAL')}
-      ${renderResetButtons(['anxiety', 'anger', 'meltdown'])}
+  document.getElementById('content').innerHTML = `
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <button onclick="exitToPicker()" style="background: transparent; border: none; color: #64748b; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 24px; padding: 0;">
+        <i class="ti ti-arrow-left" style="font-size: 18px;"></i> Back to categories
+      </button>
 
-      ${renderSectionHeader('RECOVERY')}
-      ${renderResetButtons(['shutdown', 'social', 'pain'])}
+      <div style="margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">SELECT A RESET</div>
+        <div style="font-size: 22px; font-weight: 800; color: #1e293b;">${cat.l}</div>
+      </div>
 
-      ${renderSectionHeader('NOT SURE')}
-      ${renderResetButtons(['unknown'])}
+      ${renderResetButtons(cat.keys)}
       
     </div>
   `;
@@ -341,7 +294,6 @@ function renderFlow() {
 
   const step    = state.resetStep || 0;
   const current = r.steps[step];
-  const isLast  = step === r.steps.length - 1;
 
   if (current.type === 'choice') {
     renderCompletion();
@@ -353,8 +305,6 @@ function renderFlow() {
 
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
-      
-      ${renderHeader()}
 
       <!-- Intro card on first step -->
       ${step === 0 ? `
@@ -409,7 +359,7 @@ function renderFlow() {
         </button>
       </div>
 
-      <button onclick="exitReset()" style="width: 100%; padding: 16px; background: transparent; border: none; color: #94a3b8; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px;">
+      <button onclick="exitToPicker()" style="width: 100%; padding: 16px; background: transparent; border: none; color: #94a3b8; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px;">
         <i class="ti ti-x"></i> Exit reset
       </button>
     </div>
@@ -419,7 +369,7 @@ function renderFlow() {
 // ─── Guided breathing animation ────────────────────────────
 function renderBreathing() {
   const r = RESETS.find(r => r.k === state.resetMode);
-  if (!r) { exitReset(); return; }
+  if (!r) { exitToPicker(); return; }
 
   const phase = state.breathPhase || 'breathe-out';
   const round = state.breathRound || 1;
@@ -484,8 +434,6 @@ function renderCompletion() {
 
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
-      
-      ${renderHeader()}
 
       <!-- Success Block -->
       <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 16px; padding: 32px 24px; text-align: center; margin-bottom: 24px;">
@@ -504,7 +452,7 @@ function renderCompletion() {
         </div>
       ` : ''}
 
-      ${renderSectionHeader('HOW DO YOU FEEL NOW?')}
+      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">HOW DO YOU FEEL NOW?</div>
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 24px;">
         <button onclick="logOutcome('better')" class="grid-action-btn" style="${state.resetOutcome === 'better' ? `border-color: ${palette.icon}; background: ${palette.bg};` : ''}">A bit better</button>
         <button onclick="logOutcome('same')" class="grid-action-btn" style="${state.resetOutcome === 'same' ? `border-color: ${palette.icon}; background: ${palette.bg};` : ''}">About the same</button>
@@ -523,7 +471,7 @@ function renderCompletion() {
         </div>
       ` : ''}
 
-      ${renderSectionHeader('WHAT\'S NEXT?')}
+      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">WHAT'S NEXT?</div>
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <button onclick="exitToToday()" style="padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 10px;">
           <i class="ti ti-sun" style="color: #d97706; font-size: 20px;"></i> Back to Today
@@ -538,7 +486,7 @@ function renderCompletion() {
           <button onclick="restartReset()" style="padding: 12px; background: transparent; border: 1.5px solid #e2e8f0; color: #64748b; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;">
             <i class="ti ti-rotate"></i> Run again
           </button>
-          <button onclick="goToPicker()" style="padding: 12px; background: transparent; border: 1.5px solid #e2e8f0; color: #64748b; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;">
+          <button onclick="exitToPicker()" style="padding: 12px; background: transparent; border: 1.5px solid #e2e8f0; color: #64748b; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;">
             <i class="ti ti-list"></i> Different reset
           </button>
         </div>
@@ -569,13 +517,31 @@ function renderCompletion() {
 // ─── Main render entry ────────────────────────────────────
 export function renderReset() {
   setTopbar('Reset', 'Regulation before action.');
-  if (!state.resetMode || state.resetView === 'picker') return renderPicker();
+  
+  if (state.resetView === 'picker')   return renderPicker();
+  if (state.resetView === 'category') return renderCategoryView();
   if (state.resetView === 'breathing') return renderBreathing();
   if (state.resetView === 'complete')  return renderCompletion();
+  
   renderFlow();
 }
 
 // ─── Window-scoped handlers ───────────────────────────────
+window.openCategory = (catKey) => {
+  state.resetCategory = catKey;
+  state.resetView     = 'category';
+  renderReset();
+};
+
+window.exitToPicker = () => {
+  state.resetMode     = null;
+  state.resetCategory = null;
+  state.resetView     = 'picker';
+  state.resetStep     = 0;
+  state.resetOutcome  = null;
+  renderReset();
+};
+
 window.openReset = (k) => {
   state.resetMode    = k;
   state.resetStep    = 0;
@@ -620,37 +586,21 @@ window.logOutcome = (o) => {
   renderCompletion();
 };
 
-window.exitReset = () => {
-  state.resetMode    = null;
-  state.resetView    = 'picker';
-  state.resetStep    = 0;
-  state.resetOutcome = null;
-  renderReset();
-};
+window.exitToToday = () => { window.exitToPicker(); go('today'); };
 
-window.exitToToday = () => { window.exitReset(); go('today'); };
-
-window.exitToNow = () => { window.exitReset(); go('now'); };
+window.exitToNow = () => { window.exitToPicker(); go('now'); };
 
 window.exitToEssentials = () => {
   state.tasks = state.tasks.filter(t =>
     t.meta.includes('Essentials') || t.text.toLowerCase().includes('appointment')
   );
-  window.exitReset();
+  window.exitToPicker();
   go('today');
 };
 
 window.restartReset = () => {
   state.resetStep    = 0;
   state.resetView    = 'flow';
-  state.resetOutcome = null;
-  renderReset();
-};
-
-window.goToPicker = () => {
-  state.resetMode    = null;
-  state.resetView    = 'picker';
-  state.resetStep    = 0;
   state.resetOutcome = null;
   renderReset();
 };
