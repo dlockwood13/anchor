@@ -2028,6 +2028,25 @@ function setStageKey(k) {
 // RENDER FUNCTIONS
 // ═══════════════════════════════════════════════════════════
 
+const PALETTE = {
+  lavender: { bg: '#f5f3ff', border: '#ddd6fe', text: '#4c1d95', sub: '#6d28d9', icon: '#8b5cf6', badgeBg: '#ede9fe' },
+  teal:     { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', sub: '#059669', icon: '#10b981', badgeBg: '#d1fae5' },
+  sky:      { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', sub: '#0284c7', icon: '#0ea5e9', badgeBg: '#e0f2fe' },
+  amber:    { bg: '#fffbeb', border: '#fde68a', text: '#b45309', sub: '#d97706', icon: '#f59e0b', badgeBg: '#fef3c7' },
+  peach:    { bg: '#fef2f2', border: '#fecaca', text: '#9f1239', sub: '#be123c', icon: '#f43f5e', badgeBg: '#ffe4e6' },
+  default:  { bg: '#f8fafc', border: '#e2e8f0', text: '#1e293b', sub: '#64748b', icon: '#94a3b8', badgeBg: '#f1f5f9' }
+};
+
+function renderSectionHeader(title, icon = null) {
+  return `
+    <div style="display: flex; align-items: center; gap: 12px; margin: 28px 0 16px;">
+      ${icon ? `<i class="ti ${icon}" style="color: #8b5cf6; font-size: 16px;"></i>` : ''}
+      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;">${title}</div>
+      <div style="flex: 1; height: 1.5px; background: #e2e8f0;"></div>
+    </div>
+  `;
+}
+
 // ─── Main render ──────────────────────────────────────────
 export function renderDiagnosis() {
   setTopbar('Journey', 'Where are you in the process?');
@@ -2040,21 +2059,19 @@ export function renderDiagnosis() {
 function renderConditionSelector() {
   const current = state.diagnosisCondition;
   return `
-    <div class="section-label" style="margin-top:0">
-      <i class="ti ti-medical-cross" style="color:var(--lavender);font-size:14px"></i> What are you exploring?
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+    ${renderSectionHeader('WHAT ARE YOU EXPLORING?', 'ti-aperture')}
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px;">
       ${CONDITIONS.map(c => {
         const isActive = c.k === current;
+        const pal = PALETTE[c.color] || PALETTE.lavender;
         return `
           <button onclick="setCondition('${c.k}')"
-            style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;
-                   border:2px solid ${isActive ? `var(--${c.color})` : 'var(--border)'};
-                   background:${isActive ? `var(--${c.color}-l)` : 'var(--bg-card)'};
-                   color:${isActive ? `var(--${c.color}-d)` : 'var(--text-secondary)'};
-                   border-radius:var(--r-md);cursor:pointer;font-family:var(--font);">
-            <i class="ti ${c.icon}" style="font-size:20px;color:${isActive ? `var(--${c.color}-d)` : `var(--${c.color})`}"></i>
-            <span style="font-size:11px;font-weight:700;letter-spacing:0.3px">${c.l}</span>
+            style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 4px;
+                   border: 1.5px solid ${isActive ? pal.border : '#e2e8f0'};
+                   background: ${isActive ? pal.bg : '#fff'};
+                   border-radius: 12px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            <i class="ti ${c.icon}" style="font-size: 22px; color: ${isActive ? pal.text : '#94a3b8'};"></i>
+            <span style="font-size: 12px; font-weight: 700; color: ${isActive ? pal.text : '#475569'}; letter-spacing: 0.3px;">${c.l}</span>
           </button>
         `;
       }).join('')}
@@ -2066,84 +2083,84 @@ function renderConditionSelector() {
 function renderStageList() {
   const STAGES = getStages();
   const condition = getCondition();
+  const condPal = PALETTE[condition.color] || PALETTE.lavender;
   const savedKey = getStageKey();
 
-  const completedStages = Object.keys(state.diagnosisChecked[state.diagnosisCondition] || {}).filter(k => {
-    const arr = state.diagnosisChecked[state.diagnosisCondition][k];
-    const stage = STAGES.find(s => s.k === k);
-    return stage && arr && arr.filter(Boolean).length === stage.prepare.length;
-  });
-  const progressPct = (completedStages.length / STAGES.length) * 100;
-
   document.getElementById('content').innerHTML = `
-    <div class="screen">
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <!-- Topbar Header -->
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+        <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+          <i class="ti ti-route" style="font-size: 24px;"></i>
+        </div>
+        <div>
+          <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Journey</div>
+          <div style="font-size: 15px; color: #64748b;">Where are you in the process?</div>
+        </div>
+      </div>
+
       ${renderConditionSelector()}
 
-      <div class="card ${condition.color}" style="margin-bottom:14px">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <i class="ti ${condition.icon}" style="font-size:28px;color:var(--${condition.color});flex-shrink:0"></i>
-          <div style="flex:1">
-            <div class="card-label">Your journey</div>
-            <div class="card-main">${condition.l}</div>
-            <div class="card-sub" style="margin-top:4px">${STAGES.length} stages · pick where you are now</div>
+      <!-- Journey Intro Card -->
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid ${condPal.icon}; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: flex-start; gap: 16px;">
+          <div style="width: 44px; height: 44px; border-radius: 10px; background: ${condPal.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i class="ti ${condition.icon}" style="font-size: 24px; color: ${condPal.text};"></i>
+          </div>
+          <div>
+            <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;">YOUR JOURNEY</div>
+            <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">${condition.l}</div>
+            <div style="font-size: 13px; color: #64748b;">${STAGES.length} stages · pick where you are now</div>
           </div>
         </div>
       </div>
 
-      <div class="notice purple">
-        <strong>You do not need to wait for a diagnosis to deserve support.</strong><br>
-        Your needs are real now. Tap where you are to see what to do next.
+      <!-- Purple Support Notice -->
+      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 4px;">You do not need to wait for a diagnosis to deserve support.</div>
+        <div style="font-size: 13px; color: #6d28d9;">Your needs are real now. Tap where you are to see what to do next.</div>
       </div>
 
-      ${completedStages.length > 0 ? `
-        <div class="card teal">
-          <div class="card-label">Your progress</div>
-          <div class="card-main" style="font-size:16px">${completedStages.length} of ${STAGES.length} stages with completed prep</div>
-          <div class="progress-bar" style="margin-top:12px;margin-bottom:0">
-            <div class="progress-fill" style="width:${progressPct}%"></div>
-          </div>
-        </div>
-      ` : ''}
+      ${renderSectionHeader('WHERE ARE YOU RIGHT NOW?')}
 
-      ${savedKey ? `
-        <div class="notice green">
-          You last looked at: <strong>${STAGES.find(s => s.k === savedKey)?.l || ''}</strong>
-          <button class="btn primary" style="margin-top:10px;margin-bottom:0" onclick="openStage('${savedKey}')">
-            <i class="ti ti-arrow-right"></i> Continue from here
-          </button>
-        </div>
-      ` : ''}
-
-      <div class="section-label">Where are you right now?</div>
-
-      ${STAGES.map(s => {
-        const isCurrent  = s.k === savedKey;
-        const isComplete = completedStages.includes(s.k);
-        return `
-          <button class="btn ${isCurrent ? 'primary' : ''}"
-            style="${!isCurrent ? `border-left:4px solid var(--${s.color})` : ''}"
-            onclick="openStage('${s.k}')">
-            <span style="
-              width:30px;height:30px;border-radius:50%;
-              background:${isCurrent ? 'rgba(255,255,255,0.2)' : `var(--${s.color}-l)`};
-              color:${isCurrent ? '#fff' : `var(--${s.color}-d)`};
-              font-size:13px;font-weight:700;
-              display:flex;align-items:center;justify-content:center;
-              flex-shrink:0">
-              ${isComplete ? '<i class="ti ti-check" style="font-size:16px"></i>' : s.num}
-            </span>
-            <div style="flex:1;text-align:left">
-              <div style="font-size:14px">${s.l}</div>
-              <div style="font-size:12px;font-weight:400;opacity:${isCurrent ? '0.85' : '0.65'};margin-top:2px">${s.sub}</div>
-            </div>
-            <i class="ti ti-chevron-right" style="font-size:18px;opacity:0.5;flex-shrink:0"></i>
-          </button>`;
-      }).join('')}
-
-      <div class="notice blue" style="margin-top:1.25rem">
-        <strong>Stage navigation.</strong> Pick the stage that fits where you are now. You can revisit any stage at any time, in any order. Switch conditions at the top — your progress in each is saved separately.
+      <!-- Stage List -->
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px;">
+        ${STAGES.map(s => {
+          const sPal = PALETTE[s.color] || PALETTE.lavender;
+          const isCurrent = s.k === savedKey;
+          
+          return `
+            <button onclick="openStage('${s.k}')"
+              style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #fff;
+                     border: 1.5px solid #e2e8f0; 
+                     border-left: 6px solid ${sPal.icon};
+                     border-radius: 12px; cursor: pointer; transition: background 0.2s, border-color 0.2s; text-align: left; font-family: inherit;">
+              
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: ${sPal.badgeBg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <span style="font-size: 14px; font-weight: 800; color: ${sPal.text};">${s.num}</span>
+              </div>
+              
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">${s.l}</div>
+                <div style="font-size: 13px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.sub}</div>
+              </div>
+              
+              <i class="ti ti-chevron-right" style="font-size: 20px; color: #cbd5e1; flex-shrink: 0;"></i>
+            </button>
+          `;
+        }).join('')}
       </div>
-    </div>`;
+
+      <!-- Blue Navigation Notice -->
+      <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; color: #0369a1; line-height: 1.6;">
+          <strong>Stage navigation.</strong> Pick the stage that fits where you are now. You can revisit any stage at any time, in any order. Switch conditions at the top — your progress in each is saved separately.
+        </div>
+      </div>
+      
+    </div>
+  `;
 }
 
 // ─── Stage detail view ───────────────────────────────────
