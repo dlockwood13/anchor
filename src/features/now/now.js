@@ -218,36 +218,34 @@ function renderMain() {
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif; padding: 16px 12px;">
       
       <!-- Main Task Card (Compacted) -->
-      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; border-left: 6px solid var(--teal, #41967a); padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-          <div>
-            <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">YOUR NEXT STEP</div>
-            <div style="font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1.3;">${cur.text}</div>
-            <div style="font-size: 12px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 8px;">
-              <span>${cur.meta || 'Essentials'}</span>
-              <span style="color: #cbd5e1;">|</span>
-              <span style="color: #059669; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="ti ti-bolt"></i> Low energy</span>
-            </div>
-          </div>
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; border-left: 6px solid var(--teal, #41967a); padding: 20px 20px 16px 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">YOUR NEXT STEP</div>
+        <div style="font-size: 20px; font-weight: 800; color: #1e293b; line-height: 1.3; margin-bottom: 12px;">${cur.text}</div>
+        
+        <div style="font-size: 13px; color: #64748b; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <span>${cur.meta || 'Essentials · 5 min'}</span>
+          <span style="color: #cbd5e1;">|</span>
+          <span style="color: #059669; font-weight: 700; display: flex; align-items: center; gap: 4px;"><i class="ti ti-bolt" style="font-size: 14px;"></i> Low energy</span>
         </div>
 
-        <button onclick="nowDone(${cur.id})" style="width: 100%; padding: 12px; background: var(--teal, #41967a); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
+        <button onclick="nowDone(${cur.id})" style="width: 100%; padding: 14px; background: var(--teal, #41967a); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
           <i class="ti ti-check" style="font-size: 18px;"></i> Mark as Done
         </button>
 
         ${undone.length > 1 ? `
-          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b;">
-            <span style="font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">NEXT UP:</span>
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; font-size: 13px; color: #64748b;">
+            <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">NEXT UP:</span>
             <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">${undone[1].text}</span>
           </div>
         ` : ''}
       </div>
 
       <!-- Settings Grid (Descriptive labels + Fits in screen) -->
-      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">NEED TO ADJUST?</div>
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">NEED TO ADJUST?</div>
         
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
           <button onclick="nowSetView('stuck')" class="grid-action-btn">
             <i class="ti ti-help-circle" style="color: #059669;"></i>
             <div class="gab-title">I'm stuck</div>
@@ -293,26 +291,26 @@ function renderMain() {
 
 function renderHealthTools() {
   return `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
       
       <!-- Reset Card (Compact) -->
-      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
         <div>
-          <div style="font-size: 13px; font-weight: 700; color: #065f46; margin-bottom: 2px;">Need a reset?</div>
-          <div style="font-size: 11px; color: #064e3b; line-height: 1.3;">Step away completely.</div>
+          <div style="font-size: 15px; font-weight: 800; color: #065f46; margin-bottom: 4px;">Need a reset?</div>
+          <div style="font-size: 13px; color: #064e3b; line-height: 1.4;">Step away completely.</div>
         </div>
-        <button onclick="go('reset')" style="width: 100%; padding: 8px; background: #ffffff; border: 1.5px solid #a7f3d0; color: #059669; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.2s;">
+        <button onclick="go('reset')" style="width: 100%; padding: 10px; background: #ffffff; border: 1.5px solid #a7f3d0; color: #059669; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: background 0.2s;">
           Take a Reset
         </button>
       </div>
 
       <!-- Titration Card (Compact) -->
-      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
         <div>
-          <div style="font-size: 13px; font-weight: 700; color: #4c1d95; margin-bottom: 2px;">Titration Log</div>
-          <div style="font-size: 11px; color: #5b21b6; line-height: 1.3;">Log meds & vitals.</div>
+          <div style="font-size: 15px; font-weight: 800; color: #4c1d95; margin-bottom: 4px;">Titration Log</div>
+          <div style="font-size: 13px; color: #5b21b6; line-height: 1.4;">Log meds & vitals.</div>
         </div>
-        <button onclick="nowSetView('titration')" style="width: 100%; padding: 8px; background: #ffffff; border: 1.5px solid #ddd6fe; color: #6d28d9; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.2s;">
+        <button onclick="nowSetView('titration')" style="width: 100%; padding: 10px; background: #ffffff; border: 1.5px solid #ddd6fe; color: #6d28d9; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: background 0.2s;">
           Open Log
         </button>
       </div>
@@ -327,13 +325,13 @@ function actionGridStyles() {
       .grid-action-btn {
         background: #fff;
         border: 1.5px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 12px 4px;
+        border-radius: 12px;
+        padding: 16px 8px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 6px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s;
         color: #1e293b;
@@ -344,20 +342,21 @@ function actionGridStyles() {
         background: #f8fafc;
       }
       .grid-action-btn i {
-        font-size: 20px;
+        font-size: 24px;
         margin-bottom: 2px;
       }
       .gab-title {
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 14px;
+        font-weight: 800;
         text-align: center;
+        color: #1e293b;
       }
       .gab-sub {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 500;
         color: #64748b;
         text-align: center;
-        line-height: 1.1;
+        line-height: 1.2;
       }
     </style>
   `;
@@ -1386,3 +1385,7 @@ window.titrationPrintView = function () {
 };
 
 register('now', renderNow);
+
+I want the same UI / UX on this page as the others to match 
+
+There is a file you can reference named "image_894056.png". Refer to this file by its name verbatim.
