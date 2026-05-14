@@ -5,12 +5,13 @@ import { register, setTopbar, go } from '../../app/router.js';
 window.go = go;
 
 // ─── Local state ──────────────────────────────────────────
-if (!state.diagnosisCondition)  state.diagnosisCondition  = 'adhd'; // adhd | autism | dyslexia | dyspraxia
+if (!state.diagnosisView)       state.diagnosisView       = 'menu'; // menu | list | detail
+if (!state.diagnosisCondition)  state.diagnosisCondition  = null;   // adhd | autism | dyslexia | dyspraxia
 if (!state.diagnosisStage)      state.diagnosisStage      = null;
-if (!state.diagnosisStageKey)   state.diagnosisStageKey   = {}; // { condition: stageKey }
+if (!state.diagnosisStageKey)   state.diagnosisStageKey   = {};     // { condition: stageKey }
 if (!state.diagnosisTab)        state.diagnosisTab        = 'overview';
-if (!state.diagnosisChecked)    state.diagnosisChecked    = {}; // { condition: { stageKey: [bool, ...] } }
-if (!state.diagnosisNotes)      state.diagnosisNotes      = {}; // { condition: { stageKey: string } }
+if (!state.diagnosisChecked)    state.diagnosisChecked    = {};     // { condition: { stageKey: [bool, ...] } }
+if (!state.diagnosisNotes)      state.diagnosisNotes      = {};     // { condition: { stageKey: string } }
 
 // Migrate old single-condition state if needed (from earlier version)
 if (Array.isArray(state.diagnosisStageKey)) state.diagnosisStageKey = {};
@@ -21,10 +22,10 @@ if (typeof state.diagnosisStageKey === 'string') {
 
 // ─── Conditions ───────────────────────────────────────────
 const CONDITIONS = [
-  { k: 'adhd',      l: 'ADHD',      icon: 'ti-brain',     color: 'lavender' },
-  { k: 'autism',    l: 'Autism',    icon: 'ti-heart',     color: 'teal' },
-  { k: 'dyslexia',  l: 'Dyslexia',  icon: 'ti-book',      color: 'sky' },
-  { k: 'dyspraxia', l: 'Dyspraxia', icon: 'ti-hand-move', color: 'amber' },
+  { k: 'adhd',      l: 'ADHD',      sub: '10 stages · Includes titration',     icon: 'ti-brain',     color: 'lavender' },
+  { k: 'autism',    l: 'Autism',    sub: '9 stages · NHS & private routes',    icon: 'ti-heart',     color: 'teal' },
+  { k: 'dyslexia',  l: 'Dyslexia',  sub: '8 stages · SpLD assessment pathway', icon: 'ti-book',      color: 'sky' },
+  { k: 'dyspraxia', l: 'Dyspraxia', sub: '8 stages · OT & clinical routes',    icon: 'ti-hand-move', color: 'amber' },
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -2047,30 +2048,44 @@ function renderSectionHeader(title, icon = null) {
 export function renderDiagnosis() {
   setTopbar('Journey', 'Where are you in the process?');
 
-  if (state.diagnosisStage) return renderStage();
-  renderStageList();
+  if (state.diagnosisView === 'detail' && state.diagnosisStage) return renderStage();
+  if (state.diagnosisView === 'list' && state.diagnosisCondition) return renderStageList();
+  
+  return renderMenu();
 }
 
-// ─── Condition selector strip ────────────────────────────
-function renderConditionSelector() {
-  const current = state.diagnosisCondition;
-  return `
-    ${renderSectionHeader('WHAT ARE YOU EXPLORING?', 'ti-aperture')}
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px;">
-      ${CONDITIONS.map(c => {
-        const isActive = c.k === current;
-        const pal = PALETTE[c.color] || PALETTE.lavender;
-        return `
-          <button onclick="setCondition('${c.k}')"
-            style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 4px;
-                   border: 1.5px solid ${isActive ? pal.border : '#e2e8f0'};
-                   background: ${isActive ? pal.bg : '#fff'};
-                   border-radius: 12px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
-            <i class="ti ${c.icon}" style="font-size: 22px; color: ${isActive ? pal.text : '#94a3b8'};"></i>
-            <span style="font-size: 12px; font-weight: 700; color: ${isActive ? pal.text : '#475569'}; letter-spacing: 0.3px;">${c.l}</span>
-          </button>
-        `;
-      }).join('')}
+// ─── Menu View (Condition Selector) ───────────────────────
+function renderMenu() {
+  document.getElementById('content').innerHTML = `
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      ${renderSectionHeader('WHAT ARE YOU EXPLORING?', 'ti-aperture')}
+      
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+        ${CONDITIONS.map(c => {
+          const pal = PALETTE[c.color] || PALETTE.lavender;
+          return `
+            <button onclick="openCondition('${c.k}')"
+                    style="width: 100%; text-align: left; background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid ${pal.icon}; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+              <div style="width: 48px; height: 48px; border-radius: 12px; background: ${pal.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="ti ${c.icon}" style="font-size: 24px; color: ${pal.text};"></i>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">${c.l}</div>
+                <div style="font-size: 13px; color: #64748b;">${c.sub}</div>
+              </div>
+              <i class="ti ti-chevron-right" style="font-size: 20px; color: #cbd5e1;"></i>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Purple Support Notice -->
+      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 4px;">You do not need to wait for a diagnosis to deserve support.</div>
+        <div style="font-size: 13px; color: #6d28d9;">Your needs are real now. Tap a pathway to see what to do next.</div>
+      </div>
+      
     </div>
   `;
 }
@@ -2085,7 +2100,9 @@ function renderStageList() {
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
 
-      ${renderConditionSelector()}
+      <button onclick="exitToMenu()" style="background: transparent; border: none; color: #64748b; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 24px; padding: 0;">
+        <i class="ti ti-arrow-left" style="font-size: 18px;"></i> Back to pathways
+      </button>
 
       <!-- Journey Intro Card -->
       <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid ${condPal.icon}; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
@@ -2099,12 +2116,6 @@ function renderStageList() {
             <div style="font-size: 13px; color: #64748b;">${STAGES.length} stages · pick where you are now</div>
           </div>
         </div>
-      </div>
-
-      <!-- Purple Support Notice -->
-      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-        <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 4px;">You do not need to wait for a diagnosis to deserve support.</div>
-        <div style="font-size: 13px; color: #6d28d9;">Your needs are real now. Tap where you are to see what to do next.</div>
       </div>
 
       ${renderSectionHeader('WHERE ARE YOU RIGHT NOW?')}
@@ -2140,7 +2151,7 @@ function renderStageList() {
       <!-- Blue Navigation Notice -->
       <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
         <div style="font-size: 13px; color: #0369a1; line-height: 1.6;">
-          <strong>Stage navigation.</strong> Pick the stage that fits where you are now. You can revisit any stage at any time, in any order. Switch conditions at the top — your progress in each is saved separately.
+          <strong>Stage navigation.</strong> Pick the stage that fits where you are now. You can revisit any stage at any time, in any order. Your progress in each pathway is saved separately.
         </div>
       </div>
       
@@ -2401,9 +2412,15 @@ function renderLinks(s) {
 // WINDOW HANDLERS
 // ═══════════════════════════════════════════════════════════
 
-window.setCondition = function (k) {
+window.openCondition = function (k) {
   state.diagnosisCondition = k;
-  state.diagnosisStage = null; // back to stage list when switching
+  state.diagnosisView = 'list';
+  renderDiagnosis();
+};
+
+window.exitToMenu = function () {
+  state.diagnosisView = 'menu';
+  state.diagnosisStage = null;
   renderDiagnosis();
 };
 
@@ -2411,12 +2428,13 @@ window.openStage = function (k) {
   state.diagnosisStage    = k;
   setStageKey(k);
   state.diagnosisTab      = 'overview';
+  state.diagnosisView     = 'detail';
   renderDiagnosis();
 };
 
 window.closeStage = function () {
   state.diagnosisStage = null;
-  state.diagnosisTab   = 'overview';
+  state.diagnosisView  = 'list';
   renderDiagnosis();
 };
 
