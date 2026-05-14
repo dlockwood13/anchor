@@ -46,17 +46,6 @@ export function renderTldr() {
 
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
-      
-      <!-- Topbar Header -->
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
-        <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
-          <i class="ti ti-message-2" style="font-size: 24px;"></i>
-        </div>
-        <div>
-          <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">TL;DR Assist</div>
-          <div style="font-size: 15px; color: #64748b;">Paste a message. Get what matters.</div>
-        </div>
-      </div>
 
       <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
         <div style="font-size: 14px; color: #0369a1; line-height: 1.5;">
