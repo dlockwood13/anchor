@@ -2,6 +2,9 @@ import { state, ACCENT } from '../../data/state.js';
 import { register, setTopbar, go } from '../../app/router.js';
 import { callClaude } from '../../services/api.js';
 
+// Expose 'go' globally for inline HTML onclick handlers
+window.go = go;
+
 // Init local state
 if (!state.nowView)        state.nowView = 'main';
 if (!state.nowStuckReason) state.nowStuckReason = null;
@@ -160,7 +163,7 @@ const TITRATION_MOODS = [
 
 // ─── Main router ──────────────────────────────────────────
 export function renderNow() {
-  setTopbar('Now', 'What do I do next?');
+  setTopbar('Now', 'Focus on one thing at a time.');
 
   switch (state.nowView) {
     case 'stuck':            return renderStuck();
@@ -187,8 +190,7 @@ function renderMain() {
 
   if (!cur) {
     document.getElementById('content').innerHTML = `
-      <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
-        
+      <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif; padding: 12px;">
         <!-- Empty State Hero -->
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 32px 24px; text-align: center; margin-bottom: 24px;">
           <div style="width: 56px; height: 56px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #059669;">
@@ -197,88 +199,84 @@ function renderMain() {
           <div style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">All done for now.</div>
           <div style="font-size: 14px; color: #64748b; line-height: 1.5;">Rest is valid. A smaller day still counts.</div>
         </div>
-
         <!-- Quick Actions Grid -->
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
-          <button onclick="go('today')" class="grid-action-btn">
-            <i class="ti ti-sun" style="color: #d97706;"></i>
-            <span>Back to Today</span>
+          <button onclick="go('today')" style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="ti ti-sun" style="color: #d97706; font-size: 20px;"></i> Back to Today
           </button>
-          <button onclick="go('plan')" class="grid-action-btn">
-            <i class="ti ti-plus" style="color: #3b82f6;"></i>
-            <span>Add Task</span>
+          <button onclick="go('plan')" style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="ti ti-plus" style="color: #3b82f6; font-size: 20px;"></i> Add Task
           </button>
         </div>
-
         ${renderHealthTools()}
-
       </div>
-      ${actionGridStyles()}
     `;
     return;
   }
 
   document.getElementById('content').innerHTML = `
-    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif; padding: 16px 12px;">
       
-      <!-- Main Task Card (thick left border, reduced size) -->
-      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; border-left: 6px solid var(--teal, #41967a); padding: 16px 20px; margin-bottom: 24px;">
-        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">YOUR NEXT STEP</div>
-        <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">${cur.text}</div>
-        <div style="font-size: 13px; color: #64748b; margin-bottom: 12px;">${cur.meta || 'Essentials · 5 min'}</div>
-        
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-          <span style="background:#ecfdf5;color:#059669;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;"><i class="ti ti-bolt" style="font-size:14px"></i> Low energy</span>
-          <span style="background:#fff7ed;color:#c2410c;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;"><i class="ti ti-clock" style="font-size:14px"></i> 5 min</span>
+      <!-- Main Task Card (Compacted) -->
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; border-left: 6px solid var(--teal, #41967a); padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">YOUR NEXT STEP</div>
+            <div style="font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1.3;">${cur.text}</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 8px;">
+              <span>${cur.meta || 'Essentials'}</span>
+              <span style="color: #cbd5e1;">|</span>
+              <span style="color: #059669; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="ti ti-bolt"></i> Low energy</span>
+            </div>
+          </div>
         </div>
 
-        <button onclick="nowDone(${cur.id})" style="width: 100%; padding: 12px; background: var(--teal, #41967a); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s;">
+        <button onclick="nowDone(${cur.id})" style="width: 100%; padding: 12px; background: var(--teal, #41967a); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px;">
           <i class="ti ti-check" style="font-size: 18px;"></i> Mark as Done
         </button>
 
-        <!-- Nested Next Up -->
         ${undone.length > 1 ? `
-          <div style="margin-top: 16px; border-top: 1.5px solid #f1f5f9; padding-top: 12px;">
-            <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">NEXT UP</div>
-            ${undone.slice(1, 3).map(t => `
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                <div style="width: 6px; height: 6px; border-radius: 50%; background: ${t.color ? 'var(--'+t.color+')' : '#94a3b8'};"></div>
-                <div style="font-size: 13px; color: #475569; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.text}</div>
-              </div>
-            `).join('')}
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b;">
+            <span style="font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">NEXT UP:</span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">${undone[1].text}</span>
           </div>
         ` : ''}
       </div>
 
-      <!-- Settings Grid -->
-      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">NEED TO ADJUST?</div>
-        <div style="font-size: 13px; color: #475569; margin-bottom: 16px; line-height: 1.5;">Pick whatever helps. There is no wrong answer, and you can change it later.</div>
+      <!-- Settings Grid (Descriptive labels + Fits in screen) -->
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">NEED TO ADJUST?</div>
         
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
           <button onclick="nowSetView('stuck')" class="grid-action-btn">
             <i class="ti ti-help-circle" style="color: #059669;"></i>
-            <span>I'm stuck</span>
+            <div class="gab-title">I'm stuck</div>
+            <div class="gab-sub">Find a way in</div>
           </button>
           <button onclick="nowSetView('smaller')" class="grid-action-btn">
             <i class="ti ti-arrows-minimize" style="color: #3b82f6;"></i>
-            <span>Smaller</span>
+            <div class="gab-title">Smaller</div>
+            <div class="gab-sub">Break it down</div>
           </button>
           <button onclick="nowSetView('bodyDouble')" class="grid-action-btn">
             <i class="ti ti-users" style="color: #8b5cf6;"></i>
-            <span>Double</span>
+            <div class="gab-title">Double</div>
+            <div class="gab-sub">Work together</div>
           </button>
           <button onclick="nowSetView('timerSetup')" class="grid-action-btn">
             <i class="ti ti-clock" style="color: #d97706;"></i>
-            <span>Timer</span>
+            <div class="gab-title">Timer</div>
+            <div class="gab-sub">Time-box it</div>
           </button>
           <button onclick="nowSnooze(${cur.id})" class="grid-action-btn">
             <i class="ti ti-clock-pause" style="color: #94a3b8;"></i>
-            <span>Snooze</span>
+            <div class="gab-title">Snooze</div>
+            <div class="gab-sub">Do it later</div>
           </button>
           <button onclick="nowSwap(${cur.id})" class="grid-action-btn">
             <i class="ti ti-arrows-shuffle" style="color: #94a3b8;"></i>
-            <span>Swap</span>
+            <div class="gab-title">Swap</div>
+            <div class="gab-sub">Change task</div>
           </button>
         </div>
       </div>
@@ -293,30 +291,28 @@ function renderMain() {
 
 // ─── Reusable UI Helpers ───────────────────────────────────
 
-// Extracted the wellbeing block to share it with the empty state
 function renderHealthTools() {
   return `
-    <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">WELLBEING & HEALTH</div>
-    <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
       
-      <!-- Reset Card (Green) -->
-      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+      <!-- Reset Card (Compact) -->
+      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
         <div>
-          <div style="font-size: 14px; font-weight: 700; color: #065f46; margin-bottom: 2px;">Need a reset?</div>
-          <div style="font-size: 12px; color: #064e3b;">Step away from the task completely.</div>
+          <div style="font-size: 13px; font-weight: 700; color: #065f46; margin-bottom: 2px;">Need a reset?</div>
+          <div style="font-size: 11px; color: #064e3b; line-height: 1.3;">Step away completely.</div>
         </div>
-        <button onclick="go('reset')" style="flex-shrink: 0; padding: 10px 16px; background: #ffffff; border: 1.5px solid #a7f3d0; color: #059669; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: background 0.2s;">
+        <button onclick="go('reset')" style="width: 100%; padding: 8px; background: #ffffff; border: 1.5px solid #a7f3d0; color: #059669; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.2s;">
           Take a Reset
         </button>
       </div>
 
-      <!-- Titration Card (Lavender) -->
-      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+      <!-- Titration Card (Compact) -->
+      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
         <div>
-          <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 2px;">Titration Tracker</div>
-          <div style="font-size: 12px; color: #5b21b6;">Log medication effects and vitals.</div>
+          <div style="font-size: 13px; font-weight: 700; color: #4c1d95; margin-bottom: 2px;">Titration Log</div>
+          <div style="font-size: 11px; color: #5b21b6; line-height: 1.3;">Log meds & vitals.</div>
         </div>
-        <button onclick="nowSetView('titration')" style="flex-shrink: 0; padding: 10px 16px; background: #ffffff; border: 1.5px solid #ddd6fe; color: #6d28d9; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: background 0.2s;">
+        <button onclick="nowSetView('titration')" style="width: 100%; padding: 8px; background: #ffffff; border: 1.5px solid #ddd6fe; color: #6d28d9; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.2s;">
           Open Log
         </button>
       </div>
@@ -325,7 +321,6 @@ function renderHealthTools() {
   `;
 }
 
-// Extracted the <style> block to keep the render function clean
 function actionGridStyles() {
   return `
     <style>
@@ -333,12 +328,12 @@ function actionGridStyles() {
         background: #fff;
         border: 1.5px solid #e2e8f0;
         border-radius: 10px;
-        padding: 14px 8px;
+        padding: 12px 4px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 4px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s;
         color: #1e293b;
@@ -349,11 +344,20 @@ function actionGridStyles() {
         background: #f8fafc;
       }
       .grid-action-btn i {
-        font-size: 22px;
+        font-size: 20px;
+        margin-bottom: 2px;
       }
-      .grid-action-btn span {
+      .gab-title {
         font-size: 12px;
         font-weight: 700;
+        text-align: center;
+      }
+      .gab-sub {
+        font-size: 10px;
+        font-weight: 500;
+        color: #64748b;
+        text-align: center;
+        line-height: 1.1;
       }
     </style>
   `;
