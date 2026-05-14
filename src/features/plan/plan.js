@@ -2,6 +2,9 @@ import { state, ACCENT } from '../../data/state.js';
 import { register, setTopbar, go } from '../../app/router.js';
 import { callClaude, BREAKDOWN_SYSTEM } from '../../services/api.js';
 
+// Expose 'go' globally for inline HTML onclick handlers
+window.go = go;
+
 // ─── Local state ──────────────────────────────────────────
 if (!state.planMode)         state.planMode = 'home'; // home | masterlist | timeblock | chunking | tiered | kanban | shape | brainDump | routines | quickAdd
 if (!state.masterList)       state.masterList = []; // { id, text, priority, done }
@@ -100,86 +103,39 @@ function renderHome() {
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
       
-      <!-- Topbar Header -->
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
-        <div style="width: 44px; height: 44px; background: var(--lavender, #7b61ff); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
-          <i class="ti ti-map" style="font-size: 24px;"></i>
-        </div>
-        <div>
-          <div style="font-size: 22px; font-weight: 800; color: #1a202c; letter-spacing: -0.5px;">Plan</div>
-          <div style="font-size: 15px; color: #4a5568;">Choose how to map out your day</div>
-        </div>
-      </div>
-
       <!-- Planning Methodologies Grid -->
-      <div style="background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
-        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">PLANNING METHODS</div>
-        <div style="font-size: 14px; color: #4a5568; margin-bottom: 20px;">Different brains need different methods. Pick the one that fits how you feel right now.</div>
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">PLANNING METHODS</div>
+        <div style="font-size: 14px; color: #475569; margin-bottom: 20px; line-height: 1.5;">Different brains need different methods. Pick the one that fits how you feel right now.</div>
         
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
           ${METHODOLOGIES.map(m => `
             <button onclick="setPlanMode('${m.k}')" class="grid-action-btn method-btn" style="border-left: 6px solid var(--${m.color});">
               <i class="ti ${m.icon}" style="color: var(--${m.color}); font-size: 24px; margin-bottom: 4px;"></i>
-              <span style="font-size: 15px; font-weight: 700; color: #2d3748;">${m.l}</span>
-              <span style="font-size: 12px; font-weight: 400; color: #718096; line-height: 1.4; margin-top: 2px;">${m.sub}</span>
+              <span style="font-size: 15px; font-weight: 700; color: #1e293b;">${m.l}</span>
+              <span style="font-size: 13px; font-weight: 400; color: #64748b; line-height: 1.4; margin-top: 2px;">${m.sub}</span>
             </button>
           `).join('')}
         </div>
       </div>
 
       <!-- Quick Tools Grid (3-column) -->
-      <div style="background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
-        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">QUICK TOOLS</div>
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">QUICK TOOLS</div>
         
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
           <button onclick="setPlanMode('brainDump')" class="grid-action-btn">
-            <i class="ti ti-brain" style="color: var(--lavender, #7b61ff);"></i>
+            <i class="ti ti-brain" style="color: #8b5cf6;"></i>
             <span>Brain Dump</span>
           </button>
           <button onclick="setPlanMode('routines')" class="grid-action-btn">
-            <i class="ti ti-repeat" style="color: var(--sky, #3ea0e5);"></i>
+            <i class="ti ti-repeat" style="color: #0ea5e9;"></i>
             <span>Routines</span>
           </button>
           <button onclick="setPlanMode('quickAdd')" class="grid-action-btn">
-            <i class="ti ti-plus" style="color: var(--teal, #2d8a7a);"></i>
+            <i class="ti ti-plus" style="color: #10b981;"></i>
             <span>Quick Add</span>
           </button>
-        </div>
-      </div>
-
-      <!-- Neuro-inclusive strategies (Styled like the Reset block) -->
-      <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px;">
-        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">STRATEGIES FOR ALL METHODS</div>
-        
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <div style="display: flex; gap: 12px; align-items: flex-start;">
-            <i class="ti ti-hourglass" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
-            <div>
-              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Buffer time</div>
-              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Leave extra time between tasks. Transitions cost energy.</div>
-            </div>
-          </div>
-          <div style="display: flex; gap: 12px; align-items: flex-start;">
-            <i class="ti ti-bell" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
-            <div>
-              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Gentle reminders</div>
-              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Visual timers help when time blindness is real. Use Now's timer.</div>
-            </div>
-          </div>
-          <div style="display: flex; gap: 12px; align-items: flex-start;">
-            <i class="ti ti-eye" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
-            <div>
-              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Keep it visible</div>
-              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Out of sight = out of mind. Open tabs, sticky notes, whiteboards beat hidden apps.</div>
-            </div>
-          </div>
-          <div style="display: flex; gap: 12px; align-items: flex-start;">
-            <i class="ti ti-leaf" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
-            <div>
-              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Stay flexible</div>
-              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Rigid minute-by-minute plans cause anxiety when broken. Work with energy, not against it.</div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -188,7 +144,7 @@ function renderHome() {
     <style>
       .grid-action-btn {
         background: #fff;
-        border: 2px solid #e2e8f0;
+        border: 1.5px solid #e2e8f0;
         border-radius: 12px;
         padding: 16px 8px;
         display: flex;
@@ -198,7 +154,7 @@ function renderHome() {
         gap: 8px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s;
-        color: #2d3748;
+        color: #1e293b;
         font-family: inherit;
       }
       .grid-action-btn:hover {
@@ -209,7 +165,7 @@ function renderHome() {
         font-size: 24px;
       }
       .grid-action-btn span {
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
       }
       /* Specific override for the methodologies to align text left */
@@ -220,7 +176,7 @@ function renderHome() {
         gap: 4px;
       }
       .method-btn span {
-        font-size: 15px; /* Override the 12px */
+        font-size: 15px; /* Override the 13px */
       }
     </style>
   `;
