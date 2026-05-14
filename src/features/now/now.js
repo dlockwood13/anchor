@@ -179,7 +179,6 @@ export function renderNow() {
     default:                 return renderMain();
   }
 }
-
 // ─── Main view ────────────────────────────────────────────
 function renderMain() {
   const undone = state.tasks.filter(t => !t.done);
@@ -187,81 +186,143 @@ function renderMain() {
 
   if (!cur) {
     document.getElementById('content').innerHTML = `
-      <div class="screen">
-        <div class="notice green" style="text-align:center;padding:1.5rem">
+      <div class="screen" style="max-width: 600px; margin: 0 auto;">
+        <div style="background: #e6f6ed; border: 2px solid #99d2b6; border-radius: 12px; padding: 24px; text-align: center; color: #1a4f3b; margin-bottom: 24px;">
           <div style="font-size:18px;font-weight:700;margin-bottom:8px">All done for now.</div>
           <div>Rest is valid. A smaller day still counts.</div>
         </div>
-        <button class="btn primary" onclick="go('today')"><i class="ti ti-sun"></i> Back to Today</button>
-        <button class="btn" onclick="go('plan')"><i class="ti ti-plus"></i> Add something</button>
-        <button class="btn sky" onclick="go('reset')"><i class="ti ti-refresh"></i> Take a recovery moment</button>
-        <button class="btn lavender" onclick="nowSetView('titration')"><i class="ti ti-pill"></i> Titration log</button>
+        <div style="display: grid; gap: 12px;">
+          <button class="btn primary" onclick="go('today')"><i class="ti ti-sun"></i> Back to Today</button>
+          <button class="btn" onclick="go('plan')"><i class="ti ti-plus"></i> Add something</button>
+          <button class="btn sky" onclick="go('reset')"><i class="ti ti-refresh"></i> Take a recovery moment</button>
+          <button class="btn lavender" onclick="nowSetView('titration')"><i class="ti ti-pill"></i> Titration log</button>
+        </div>
       </div>`;
     return;
   }
 
   document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="card teal">
-        <div class="card-label">Your next step</div>
-        <div class="card-main">${cur.text}</div>
-        <div class="card-sub">${cur.meta}</div>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-          <span class="tag green"><i class="ti ti-bolt" style="font-size:12px"></i> Low energy</span>
-          <span class="tag amber"><i class="ti ti-clock" style="font-size:12px"></i> 5 min</span>
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <!-- Topbar Header (matching mockup style) -->
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+        <div style="width: 44px; height: 44px; background: var(--teal, #2d8a7a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+          <i class="ti ti-check" style="font-size: 24px;"></i>
+        </div>
+        <div>
+          <div style="font-size: 22px; font-weight: 800; color: #1a202c; letter-spacing: -0.5px;">Now</div>
+          <div style="font-size: 15px; color: #4a5568;">Focus on one thing at a time</div>
         </div>
       </div>
 
-      <button class="btn primary" onclick="nowDone(${cur.id})">
-        <i class="ti ti-check"></i> Done
-      </button>
+      <!-- Main Task Card (thick left border) -->
+      <div style="background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; border-left: 8px solid var(--teal, #2d8a7a); padding: 24px; margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">YOUR NEXT STEP</div>
+        <div style="font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 4px;">${cur.text}</div>
+        <div style="font-size: 14px; color: #718096; margin-bottom: 16px;">${cur.meta || 'No description'}</div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+          <span style="background:#e6fffa;color:#234e52;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:600;"><i class="ti ti-bolt" style="font-size:12px"></i> Low energy</span>
+          <span style="background:#fffaf0;color:#7b341e;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:600;"><i class="ti ti-clock" style="font-size:12px"></i> 5 min</span>
+        </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <button class="btn lavender" style="margin:0" onclick="nowSetView('stuck')">
-          <i class="ti ti-help"></i> I am stuck
+        <button onclick="nowDone(${cur.id})" style="width: 100%; padding: 14px; background: var(--teal, #2d8a7a); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i class="ti ti-check" style="font-size: 20px;"></i> Mark as Done
         </button>
-        <button class="btn sky" style="margin:0" onclick="nowSetView('smaller')">
-          <i class="ti ti-arrows-minimize"></i> Make smaller
-        </button>
-        <button class="btn" style="margin:0" onclick="nowSetView('bodyDouble')">
-          <i class="ti ti-users"></i> Body double
-        </button>
-        <button class="btn" style="margin:0" onclick="nowSetView('timerSetup')">
-          <i class="ti ti-clock"></i> Timer
-        </button>
-      </div>
 
-      <button class="btn amber-btn" onclick="nowSnooze(${cur.id})">
-        <i class="ti ti-clock-pause"></i> Snooze · do this later
-      </button>
-      <button class="btn" onclick="nowSwap(${cur.id})">
-        <i class="ti ti-arrows-shuffle"></i> Swap to next task
-      </button>
-      <button class="btn peach" onclick="go('reset')">
-        <i class="ti ti-refresh"></i> I need a reset first
-      </button>
-
-      <!-- Titration tracker entry point -->
-      <button class="btn lavender" onclick="nowSetView('titration')">
-        <i class="ti ti-pill"></i> Titration log${state.titrationEntries.length > 0 ? ` · ${state.titrationEntries.length} entries` : ''}
-      </button>
-
-      <div class="section-label">Next up</div>
-      <div class="card" style="padding:0.5rem 1.25rem">
-        ${undone.slice(1, 3).map(t => `
-          <div class="task-row">
-            <div style="flex:1">
-              <div class="task-text" style="font-size:14px">${t.text}</div>
-              <div class="task-meta">${t.meta}</div>
-            </div>
-            <span style="width:6px;height:6px;border-radius:50%;background:${ACCENT[t.color] || '#888780'};margin-top:8px;flex-shrink:0"></span>
+        <!-- Nested Next Up -->
+        ${undone.length > 1 ? `
+          <div style="margin-top: 24px; border-top: 2px solid #e2e8f0; padding-top: 16px;">
+            <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">NEXT UP</div>
+            ${undone.slice(1, 3).map(t => `
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${t.color ? 'var(--'+t.color+')' : '#cbd5e1'};"></div>
+                <div style="font-size: 14px; color: #4a5568; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.text}</div>
+              </div>
+            `).join('')}
           </div>
-        `).join('') || `
-          <div class="task-row">
-            <div class="task-text" style="color:var(--text-muted);font-size:14px">Nothing else queued.</div>
-          </div>`}
+        ` : ''}
       </div>
-    </div>`;
+
+      <!-- Settings Grid (Matching the image's 3-column pill layout) -->
+      <div style="background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">NEED TO ADJUST?</div>
+        <div style="font-size: 14px; color: #4a5568; margin-bottom: 20px;">Pick whatever helps. There is no wrong answer, and you can change it later.</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <button onclick="nowSetView('stuck')" class="grid-action-btn">
+            <i class="ti ti-help" style="color: var(--teal, #2d8a7a);"></i>
+            <span>I'm stuck</span>
+          </button>
+          <button onclick="nowSetView('smaller')" class="grid-action-btn">
+            <i class="ti ti-arrows-minimize" style="color: var(--sky, #3ea0e5);"></i>
+            <span>Smaller</span>
+          </button>
+          <button onclick="nowSetView('bodyDouble')" class="grid-action-btn">
+            <i class="ti ti-users" style="color: var(--lavender, #7b61ff);"></i>
+            <span>Double</span>
+          </button>
+          <button onclick="nowSetView('timerSetup')" class="grid-action-btn">
+            <i class="ti ti-clock" style="color: var(--amber, #e59c3e);"></i>
+            <span>Timer</span>
+          </button>
+          <button onclick="nowSnooze(${cur.id})" class="grid-action-btn">
+            <i class="ti ti-clock-pause" style="color: #a0aec0;"></i>
+            <span>Snooze</span>
+          </button>
+          <button onclick="nowSwap(${cur.id})" class="grid-action-btn">
+            <i class="ti ti-arrows-shuffle" style="color: #a0aec0;"></i>
+            <span>Swap</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Green Notice Block -->
+      <div style="background: #e6f6ed; border: 2px solid #99d2b6; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 14px; color: #1a4f3b; line-height: 1.5; margin-bottom: 16px;">
+          <strong>Need a reset?</strong> If your brain is too loud or you are overwhelmed, step away from the task completely.
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <button onclick="go('reset')" style="flex: 1; padding: 12px; background: transparent; border: 2px solid #1a4f3b; color: #1a4f3b; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer;">
+            Take a Reset
+          </button>
+          <button onclick="nowSetView('titration')" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.6); border: 2px solid #99d2b6; color: #1a4f3b; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer;">
+            Titration Log
+          </button>
+        </div>
+      </div>
+      
+    </div>
+    
+    <style>
+      .grid-action-btn {
+        background: #fff;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        color: #2d3748;
+        font-family: inherit;
+      }
+      .grid-action-btn:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+      }
+      .grid-action-btn i {
+        font-size: 24px;
+      }
+      .grid-action-btn span {
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  `;
 }
 
 // ─── Stuck picker ─────────────────────────────────────────
