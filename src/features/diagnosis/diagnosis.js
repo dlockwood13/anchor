@@ -1,6 +1,9 @@
 import { state } from '../../data/state.js';
 import { register, setTopbar, go } from '../../app/router.js';
 
+// Expose 'go' globally
+window.go = go;
+
 // ─── Local state ──────────────────────────────────────────
 if (!state.diagnosisCondition)  state.diagnosisCondition  = 'adhd'; // adhd | autism | dyslexia | dyspraxia
 if (!state.diagnosisStage)      state.diagnosisStage      = null;
@@ -24,14 +27,6 @@ const CONDITIONS = [
   { k: 'dyspraxia', l: 'Dyspraxia', icon: 'ti-hand-move', color: 'amber' },
 ];
 
-const LINK_BG = {
-  lavender: 'var(--lavender-l)', teal: 'var(--teal-l)',
-  sky: 'var(--sky-l)', peach: 'var(--peach-l)', amber: 'var(--amber-l)',
-};
-const LINK_IC = {
-  lavender: 'var(--lavender)', teal: 'var(--teal)',
-  sky: 'var(--sky)', peach: 'var(--peach)', amber: 'var(--amber)',
-};
 // ═══════════════════════════════════════════════════════════
 // ADHD — 10 stages, includes titration
 // ═══════════════════════════════════════════════════════════
@@ -2024,6 +2019,7 @@ function getStageKey() {
 function setStageKey(k) {
   state.diagnosisStageKey[state.diagnosisCondition] = k;
 }
+
 // ═══════════════════════════════════════════════════════════
 // RENDER FUNCTIONS
 // ═══════════════════════════════════════════════════════════
@@ -2088,17 +2084,6 @@ function renderStageList() {
 
   document.getElementById('content').innerHTML = `
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
-      
-      <!-- Topbar Header -->
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
-        <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
-          <i class="ti ti-route" style="font-size: 24px;"></i>
-        </div>
-        <div>
-          <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Journey</div>
-          <div style="font-size: 15px; color: #64748b;">Where are you in the process?</div>
-        </div>
-      </div>
 
       ${renderConditionSelector()}
 
@@ -2185,175 +2170,200 @@ function renderStage() {
   const checked = getChecked(s.k) || new Array(s.prepare.length).fill(false);
   const completedCount = checked.filter(Boolean).length;
   const prepPct = (completedCount / s.prepare.length) * 100;
-
-  let tabContent = '';
-  if (tab === 'overview') tabContent = renderOverview(s);
-  if (tab === 'prepare')  tabContent = renderPrepare(s, checked);
-  if (tab === 'scripts')  tabContent = renderScripts(s);
-  if (tab === 'support')  tabContent = renderSupport(s);
-  if (tab === 'links')    tabContent = renderLinks(s);
-
+  
+  const pal = PALETTE[s.color] || PALETTE.lavender;
   const condition = getCondition();
 
+  let tabContent = '';
+  if (tab === 'overview') tabContent = renderOverview(s, pal);
+  if (tab === 'prepare')  tabContent = renderPrepare(s, checked, pal);
+  if (tab === 'scripts')  tabContent = renderScripts(s, pal);
+  if (tab === 'support')  tabContent = renderSupport(s, pal);
+  if (tab === 'links')    tabContent = renderLinks(s);
+
   document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <button class="btn" style="margin-bottom:10px;color:var(--text-muted)" onclick="closeStage()">
-        <i class="ti ti-arrow-left"></i> All stages
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <button onclick="closeStage()" style="background: transparent; border: none; color: #64748b; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 24px; padding: 0;">
+        <i class="ti ti-arrow-left" style="font-size: 18px;"></i> All stages
       </button>
 
-      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px">
-        ${condition.l} pathway
+      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">
+        ${condition.l} PATHWAY
       </div>
 
-      <div class="card ${s.color}">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <i class="ti ${s.icon}" style="font-size:28px;color:var(--${s.color});flex-shrink:0"></i>
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid ${pal.icon}; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: flex-start; gap: 16px;">
+          <div style="width: 44px; height: 44px; border-radius: 10px; background: ${pal.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i class="ti ${s.icon}" style="font-size: 24px; color: ${pal.text};"></i>
+          </div>
           <div>
-            <div class="card-label">Stage ${s.num} of ${STAGES.length}</div>
-            <div class="card-main">${s.l}</div>
+            <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;">STAGE ${s.num} OF ${STAGES.length}</div>
+            <div style="font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">${s.l}</div>
           </div>
         </div>
       </div>
 
       ${tab === 'prepare' && s.prepare.length > 0 ? `
-        <div class="progress-bar" style="margin-bottom:16px">
-          <div class="progress-fill" style="width:${prepPct}%"></div>
+        <div style="height: 6px; background: #e2e8f0; border-radius: 3px; margin-bottom: 8px; overflow: hidden;">
+          <div style="height: 100%; width: ${prepPct}%; background: ${pal.icon}; transition: width 0.3s ease;"></div>
         </div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;text-align:center">
+        <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 24px; text-align: center;">
           ${completedCount} of ${s.prepare.length} prep items done
         </div>
       ` : ''}
 
-      <div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">
-        ${TABS.map(t => `
-          <button onclick="setStageTab('${t.k}')"
-            style="padding:7px 12px;white-space:nowrap;
-                   border:2px solid ${tab === t.k ? `var(--${s.color})` : 'var(--border)'};
-                   border-radius:var(--r-pill);
-                   background:${tab === t.k ? `var(--${s.color}-l)` : 'var(--bg-card)'};
-                   color:${tab === t.k ? `var(--${s.color}-d)` : 'var(--text-primary)'};
-                   font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;
-                   display:flex;align-items:center;gap:5px;flex-shrink:0">
-            <i class="ti ${t.icon}" style="font-size:14px"></i>${t.l}
-          </button>`).join('')}
+      <!-- Tabs -->
+      <div style="display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch;">
+        ${TABS.map(t => {
+          const isActive = tab === t.k;
+          return `
+            <button onclick="setStageTab('${t.k}')"
+              style="padding: 8px 16px; white-space: nowrap; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+                     border: 1.5px solid ${isActive ? pal.icon : '#e2e8f0'};
+                     background: ${isActive ? pal.bg : '#fff'};
+                     color: ${isActive ? pal.text : '#475569'};">
+              <i class="ti ${t.icon}" style="font-size: 16px;"></i> ${t.l}
+            </button>
+          `;
+        }).join('')}
       </div>
 
       ${tabContent}
 
-      <div style="display:flex;gap:8px;margin-top:1.5rem">
+      <!-- Bottom Navigation -->
+      <div style="display: flex; gap: 12px; margin-top: 32px; border-top: 1.5px solid #e2e8f0; padding-top: 24px;">
         ${prevStage ? `
-          <button class="btn" style="flex:1;justify-content:flex-start;font-size:13px" onclick="openStage('${prevStage.k}')">
-            <i class="ti ti-arrow-left"></i> ${prevStage.sub}
-          </button>` : '<div style="flex:1"></div>'}
+          <button style="flex: 1; padding: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; text-align: left;" onclick="openStage('${prevStage.k}')">
+            <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;"><i class="ti ti-arrow-left"></i> PREVIOUS</span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${prevStage.sub}</span>
+          </button>` : '<div style="flex: 1;"></div>'}
+          
         ${nextStage ? `
-          <button class="btn primary" style="flex:1;justify-content:flex-end;font-size:13px" onclick="openStage('${nextStage.k}')">
-            ${nextStage.sub} <i class="ti ti-arrow-right"></i>
-          </button>` : '<div style="flex:1"></div>'}
+          <button style="flex: 1; padding: 12px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: flex-end; text-align: right;" onclick="openStage('${nextStage.k}')">
+            <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">NEXT <i class="ti ti-arrow-right"></i></span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: #0ea5e9;">${nextStage.sub}</span>
+          </button>` : '<div style="flex: 1;"></div>'}
       </div>
-    </div>`;
+      
+    </div>
+    
+    <style>
+      .custom-checkbox.done {
+        background: ${pal.icon} !important;
+        border-color: ${pal.icon} !important;
+      }
+    </style>
+  `;
 }
 
 // ─── Overview tab ────────────────────────────────────────
-function renderOverview(s) {
+function renderOverview(s, pal) {
   return `
-    <div class="section-label">What this stage is about</div>
-    <div class="notice ${s.color === 'lavender' ? 'purple' : s.color === 'sky' ? 'blue' : s.color === 'teal' ? 'green' : s.color}" style="line-height:1.7">
-      ${s.what}
+    ${renderSectionHeader('WHAT THIS STAGE IS ABOUT')}
+    <div style="background: ${pal.bg}; border: 1.5px solid ${pal.border}; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+      <div style="font-size: 14px; color: ${pal.text}; line-height: 1.6;">${s.what}</div>
     </div>
 
-    <div class="section-label">What happens next</div>
-    ${s.next.map((item, i) => `
-      <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1.5px solid var(--border)">
-        <span style="
-          width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:1px;
-          background:var(--${s.color}-l);color:var(--${s.color}-d);
-          font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">
-          ${i + 1}
-        </span>
-        <div style="font-size:15px;color:var(--text-primary);line-height:1.5;flex:1">${item}</div>
-      </div>`).join('')}
+    ${renderSectionHeader('WHAT HAPPENS NEXT')}
+    <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 8px 0; margin-bottom: 24px;">
+      ${s.next.map((item, i) => `
+        <div style="display: flex; gap: 16px; align-items: flex-start; padding: 12px 20px; border-bottom: ${i < s.next.length - 1 ? '1.5px solid #e2e8f0' : 'none'};">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: ${pal.badgeBg}; color: ${pal.text}; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+            ${i + 1}
+          </div>
+          <div style="font-size: 14px; color: #334155; line-height: 1.6; flex: 1;">${item}</div>
+        </div>
+      `).join('')}
+    </div>
 
-    <button class="btn primary" style="margin-top:1.25rem" onclick="setStageTab('prepare')">
-      <i class="ti ti-checklist"></i> Start preparing
+    <button onclick="setStageTab('prepare')" style="width: 100%; padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 15px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+      <i class="ti ti-checklist" style="color: ${pal.icon}; font-size: 20px;"></i> Start preparing
     </button>
   `;
 }
 
 // ─── Prepare tab ─────────────────────────────────────────
-function renderPrepare(s, checked) {
+function renderPrepare(s, checked, pal) {
   return `
-    <div class="section-label">How to prepare</div>
-    <div class="notice blue" style="margin-bottom:0.85rem">
-      Tap each item to mark it done. Your progress is saved.
+    ${renderSectionHeader('HOW TO PREPARE')}
+    <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+      <div style="font-size: 13px; color: #0369a1;">Tap each item to mark it done. Your progress is saved.</div>
     </div>
-    <div class="card" style="padding:0.5rem 1.25rem">
+    
+    <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
       ${s.prepare.map((item, i) => `
-        <div class="task-row">
-          <div class="task-check${checked[i] ? ' done' : ''}"
-            onclick="toggleStagePrep(${i})"
-            role="checkbox"
-            aria-checked="${checked[i]}"
-            aria-label="${item}">
-            ${checked[i] ? '<i class="ti ti-check" style="font-size:14px"></i>' : ''}
+        <div style="padding: 16px; display: flex; align-items: flex-start; gap: 16px; border-bottom: ${i < s.prepare.length - 1 ? '1.5px solid #e2e8f0' : 'none'}; cursor: pointer;"
+             onclick="toggleStagePrep(${i})">
+          <div class="custom-checkbox ${checked[i] ? 'done' : ''}" style="width: 24px; height: 24px; border: 2px solid #cbd5e1; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s; flex-shrink: 0; margin-top: 2px;" role="checkbox" aria-checked="${checked[i]}">
+            ${checked[i] ? '<i class="ti ti-check" style="font-size: 16px;"></i>' : ''}
           </div>
-          <div class="task-text${checked[i] ? ' done' : ''}" style="font-size:15px;font-weight:${checked[i] ? '400' : '700'}">${item}</div>
-        </div>`).join('')}
+          <div style="font-size: 14px; font-weight: ${checked[i] ? '400' : '600'}; color: ${checked[i] ? '#94a3b8' : '#334155'}; line-height: 1.5; flex: 1; transition: color 0.2s;">${item}</div>
+        </div>
+      `).join('')}
     </div>
 
     ${checked.filter(Boolean).length === s.prepare.length ? `
-      <div class="notice green" style="margin-top:0.85rem;text-align:center">
-        <strong>Prep complete for this stage.</strong> When you are ready, move to the next stage.
+      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 24px;">
+        <strong style="color: #065f46; font-size: 14px;">Prep complete for this stage.</strong>
+        <div style="color: #064e3b; font-size: 13px; margin-top: 4px;">When you are ready, move to the next stage.</div>
       </div>
     ` : ''}
 
-    <button class="btn" style="margin-top:0.5rem" onclick="resetStagePrep()">
+    <button onclick="resetStagePrep()" style="width: 100%; padding: 14px; background: transparent; border: 1.5px dashed #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
       <i class="ti ti-rotate"></i> Reset this checklist
     </button>
   `;
 }
 
 // ─── Scripts tab ─────────────────────────────────────────
-function renderScripts(s) {
+function renderScripts(s, pal) {
   return `
-    <div class="section-label">Scripts for conversations</div>
-    <div class="notice blue" style="margin-bottom:0.85rem">
-      These are starting points. Edit them to sound like you before using.
+    ${renderSectionHeader('SCRIPTS FOR CONVERSATIONS')}
+    <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+      <div style="font-size: 13px; color: #0369a1;">These are starting points. Edit them to sound like you before using.</div>
     </div>
-    ${s.scripts.map((sc, i) => `
-      <div class="card" style="margin-bottom:10px">
-        <div class="card-label">${sc.l}</div>
-        <div style="font-size:14px;color:var(--text-primary);line-height:1.6;margin:8px 0 12px;padding:10px;background:var(--bg-page);border-radius:var(--r-md);border:1px solid var(--border)">
-          "${sc.t}"
+    
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      ${s.scripts.map((sc, i) => `
+        <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+          <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">${sc.l}</div>
+          <div style="font-size: 14px; color: #334155; line-height: 1.6; margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; font-style: italic;">
+            "${sc.t}"
+          </div>
+          <button onclick="copyScriptDiag(${i}, this)"
+            style="padding: 10px 16px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+            <i class="ti ti-copy" style="color: ${pal.icon}; font-size: 16px;"></i> Copy
+          </button>
         </div>
-        <button onclick="copyScriptDiag(${i}, this)"
-          class="btn sky" style="width:auto;padding:8px 14px;margin:0;font-size:13px">
-          <i class="ti ti-copy"></i> Copy
-        </button>
-      </div>`).join('')}
+      `).join('')}
+    </div>
   `;
 }
 
 // ─── Support tab ─────────────────────────────────────────
-function renderSupport(s) {
+function renderSupport(s, pal) {
   return `
-    <div class="section-label">Support you can use now</div>
-    <div class="notice green" style="margin-bottom:0.85rem">
-      You do not need to wait for a diagnosis to use any of these.
+    ${renderSectionHeader('SUPPORT YOU CAN USE NOW')}
+    <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+      <div style="font-size: 13px; color: #065f46; font-weight: 600;">You do not need to wait for a diagnosis to use any of these.</div>
     </div>
-    <div class="card" style="padding:0.5rem 1.25rem">
+    
+    <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 8px 0; margin-bottom: 24px;">
       ${s.support.map(item => `
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1.5px solid var(--border)">
-          <i class="ti ti-check" style="color:var(--teal);font-size:18px;flex-shrink:0;margin-top:2px"></i>
-          <div style="font-size:15px;color:var(--text-primary);line-height:1.5;flex:1">${item}</div>
-        </div>`).join('')}
+        <div style="display: flex; gap: 16px; align-items: flex-start; padding: 12px 20px; border-bottom: 1.5px solid #f1f5f9;">
+          <i class="ti ti-check" style="color: ${pal.icon}; font-size: 20px; flex-shrink: 0; margin-top: 2px;"></i>
+          <div style="font-size: 14px; color: #334155; line-height: 1.6; flex: 1;">${item}</div>
+        </div>
+      `).join('')}
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem">
-      <button class="btn primary" style="margin:0" onclick="go('today')">
-        <i class="ti ti-sun"></i> Open Today
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <button onclick="go('today')" style="padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="ti ti-sun" style="color: #d97706; font-size: 18px;"></i> Open Today
       </button>
-      <button class="btn sky" style="margin:0" onclick="go('reset')">
-        <i class="ti ti-refresh"></i> Open Reset
+      <button onclick="go('reset')" style="padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="ti ti-refresh" style="color: #0ea5e9; font-size: 18px;"></i> Open Reset
       </button>
     </div>
   `;
@@ -2362,27 +2372,35 @@ function renderSupport(s) {
 // ─── Links tab ───────────────────────────────────────────
 function renderLinks(s) {
   return `
-    <div class="section-label">Useful links for this stage</div>
-    <div class="notice blue" style="margin-bottom:0.85rem">
-      External resources. All open in a new tab.
+    ${renderSectionHeader('USEFUL LINKS FOR THIS STAGE')}
+    <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+      <div style="font-size: 13px; color: #0369a1;">External resources. All open in a new tab.</div>
     </div>
-    ${s.links.map(lk => `
-      <a href="${lk.url}" target="_blank" rel="noopener noreferrer" class="link-card">
-        <div class="link-icon" style="background:${LINK_BG[lk.color] || 'var(--teal-l)'}">
-          <i class="ti ${lk.icon}" style="color:${LINK_IC[lk.color] || 'var(--teal)'}"></i>
-        </div>
-        <div style="flex:1;min-width:0">
-          <div class="link-title">${lk.title}</div>
-          <div class="link-sub">${lk.sub}</div>
-        </div>
-        <i class="ti ti-external-link" style="font-size:16px;color:var(--text-muted);flex-shrink:0"></i>
-      </a>`).join('')}
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      ${s.links.map(lk => {
+        const pal = PALETTE[lk.color] || PALETTE.lavender;
+        return `
+          <a href="${lk.url}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; text-decoration: none; transition: border-color 0.2s;">
+            <div style="width: 40px; height: 40px; border-radius: 10px; background: ${pal.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="ti ${lk.icon}" style="font-size: 20px; color: ${pal.text};"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">${lk.title}</div>
+              <div style="font-size: 13px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${lk.sub}</div>
+            </div>
+            <i class="ti ti-external-link" style="font-size: 18px; color: #cbd5e1; flex-shrink: 0;"></i>
+          </a>
+        `;
+      }).join('')}
+    </div>
   `;
 }
 
 // ═══════════════════════════════════════════════════════════
 // WINDOW HANDLERS
 // ═══════════════════════════════════════════════════════════
+
 window.setCondition = function (k) {
   state.diagnosisCondition = k;
   state.diagnosisStage = null; // back to stage list when switching
@@ -2441,15 +2459,19 @@ window.copyScriptDiag = function (idx, btn) {
   if (!script) return;
 
   navigator.clipboard.writeText(script.t).catch(() => {});
-  btn.innerHTML = '<i class="ti ti-check"></i> Copied';
-  btn.style.background = 'var(--teal-l)';
-  btn.style.color = 'var(--teal-d)';
-  btn.style.borderColor = 'var(--teal)';
+  
+  const pal = PALETTE[stage.color] || PALETTE.lavender;
+  
+  btn.innerHTML = `<i class="ti ti-check" style="color: ${pal.icon}; font-size: 16px;"></i> Copied`;
+  btn.style.background = pal.bg;
+  btn.style.color = pal.text;
+  btn.style.borderColor = pal.icon;
+  
   setTimeout(() => {
-    btn.innerHTML = '<i class="ti ti-copy"></i> Copy';
-    btn.style.background = '';
-    btn.style.color = '';
-    btn.style.borderColor = '';
+    btn.innerHTML = `<i class="ti ti-copy" style="color: ${pal.icon}; font-size: 16px;"></i> Copy`;
+    btn.style.background = '#fff';
+    btn.style.color = '#475569';
+    btn.style.borderColor = '#e2e8f0';
   }, 1800);
 };
 
