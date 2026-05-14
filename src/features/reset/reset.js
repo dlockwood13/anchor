@@ -250,42 +250,79 @@ const RESETS = [
 // ─── Picker view ───────────────────────────────────────────
 function renderPicker() {
   document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="notice purple">
-        <strong>Regulation before productivity.</strong><br>
-        You do not need to do everything. What kind of hard is this?
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <!-- Topbar Header (Matching Now & Plan screens) -->
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+        <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+          <i class="ti ti-refresh" style="font-size: 24px;"></i>
+        </div>
+        <div>
+          <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Reset</div>
+          <div style="font-size: 15px; color: #64748b;">Regulation before action.</div>
+        </div>
       </div>
 
-      <div class="section-label">Sensory</div>
+      <!-- Purple Regulation Notice -->
+      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; margin-bottom: 28px;">
+        <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 4px;">Regulation before productivity.</div>
+        <div style="font-size: 14px; color: #6d28d9;">You do not need to do everything. What kind of hard is this?</div>
+      </div>
+
+      ${renderSectionHeader('SENSORY')}
       ${renderResetButtons(['over', 'under'])}
 
-      <div class="section-label">Cognitive</div>
+      ${renderSectionHeader('COGNITIVE')}
       ${renderResetButtons(['start', 'decision', 'change'])}
 
-      <div class="section-label">Emotional</div>
+      ${renderSectionHeader('EMOTIONAL')}
       ${renderResetButtons(['anxiety', 'anger', 'meltdown'])}
 
-      <div class="section-label">Recovery</div>
+      ${renderSectionHeader('RECOVERY')}
       ${renderResetButtons(['shutdown', 'social', 'pain'])}
 
-      <div class="section-label">Not sure</div>
+      ${renderSectionHeader('NOT SURE')}
       ${renderResetButtons(['unknown'])}
-    </div>`;
+      
+    </div>
+  `;
+}
+
+function renderSectionHeader(title) {
+  return `
+    <div style="display: flex; align-items: center; gap: 12px; margin: 32px 0 16px;">
+      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px;">${title}</div>
+      <div style="flex: 1; height: 1.5px; background: #e2e8f0;"></div>
+    </div>
+  `;
 }
 
 function renderResetButtons(keys) {
+  // Hardcoded palette to perfectly match image_b01516.png
+  const colorMap = {
+    lavender: { bg: '#f5f3ff', border: '#ddd6fe', text: '#4c1d95', sub: '#6d28d9' },
+    peach:    { bg: '#fef2f2', border: '#fecaca', text: '#9f1239', sub: '#be123c' },
+    amber:    { bg: '#fffbeb', border: '#fde68a', text: '#b45309', sub: '#d97706' },
+    sky:      { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', sub: '#0284c7' },
+    teal:     { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', sub: '#059669' }
+  };
+
   return keys.map(k => {
     const r = RESETS.find(r => r.k === k);
     if (!r) return '';
+    
+    // Fallback to lavender if color is missing
+    const palette = colorMap[r.color] || colorMap.lavender;
+    
     return `
-      <button class="btn" style="margin-bottom:6px;padding:14px 16px;
-                 background:var(--${r.color}-l);
-                 border-color:var(--${r.color}-m)"
-        onclick="openReset('${r.k}')">
-        <i class="ti ${r.icon}" style="font-size:22px;color:var(--${r.color});flex-shrink:0"></i>
-        <div style="flex:1">
-          <div style="color:var(--${r.color}-d)">${r.l}</div>
-          <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px">${r.sub}</div>
+      <button onclick="openReset('${r.k}')" 
+              style="width: 100%; text-align: left; background: ${palette.bg}; border: 1.5px solid ${palette.border}; 
+                     border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; 
+                     gap: 16px; cursor: pointer; transition: opacity 0.2s, transform 0.1s; font-family: inherit;">
+        <i class="ti ${r.icon}" style="font-size: 24px; color: ${palette.text}; flex-shrink: 0;"></i>
+        <div style="flex: 1;">
+          <div style="font-size: 15px; font-weight: 700; color: ${palette.text}; margin-bottom: 2px;">${r.l}</div>
+          <div style="font-size: 13px; font-weight: 400; color: ${palette.sub}; opacity: 0.9;">${r.sub}</div>
         </div>
       </button>`;
   }).join('');
