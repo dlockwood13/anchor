@@ -98,81 +98,132 @@ export function renderPlan() {
 // ─── HOME: methodology picker ────────────────────────────
 function renderHome() {
   document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="notice blue">
-        <strong>How do you want to plan today?</strong><br>
-        Different brains need different methods. Pick the one that fits how you feel right now.
-      </div>
-
-      <div class="section-label">Planning methodologies</div>
-      ${METHODOLOGIES.map(m => `
-        <button class="btn" style="border-left:5px solid var(--${m.color});text-align:left;padding:14px 16px"
-                onclick="setPlanMode('${m.k}')">
-          <i class="ti ${m.icon}" style="font-size:24px;color:var(--${m.color});flex-shrink:0"></i>
-          <div style="flex:1">
-            <div style="font-size:15px">${m.l}</div>
-            <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px">${m.sub}</div>
-          </div>
-          <i class="ti ti-chevron-right" style="font-size:18px;color:var(--text-muted);flex-shrink:0"></i>
-        </button>
-      `).join('')}
-
-      <div class="section-label">Quick tools</div>
-      <button class="btn lavender" onclick="setPlanMode('brainDump')">
-        <i class="ti ti-brain"></i>
-        <div style="flex:1">
-          <div>Brain dump</div>
-          <div style="font-size:12px;font-weight:400;opacity:0.75;margin-top:2px">Get everything out, sorting comes later</div>
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <!-- Topbar Header -->
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+        <div style="width: 44px; height: 44px; background: var(--lavender, #7b61ff); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+          <i class="ti ti-map" style="font-size: 24px;"></i>
         </div>
-      </button>
-      <button class="btn sky" onclick="setPlanMode('routines')">
-        <i class="ti ti-repeat"></i>
-        <div style="flex:1">
-          <div>Start a routine</div>
-          <div style="font-size:12px;font-weight:400;opacity:0.75;margin-top:2px">Morning, bedtime, leaving home, work start</div>
-        </div>
-      </button>
-      <button class="btn" onclick="setPlanMode('quickAdd')">
-        <i class="ti ti-plus"></i>
-        <div style="flex:1">
-          <div>Quick add to Today</div>
-          <div style="font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px">Add a single task right now</div>
-        </div>
-      </button>
-
-      <!-- Neuro-inclusive strategies -->
-      <div class="section-label">Strategies that help all methods</div>
-      <div class="card sky">
-        <div style="display:flex;gap:10px;margin-bottom:14px">
-          <i class="ti ti-hourglass" style="font-size:22px;color:var(--sky);flex-shrink:0;margin-top:2px"></i>
-          <div>
-            <div class="card-main" style="font-size:14px;margin-bottom:4px">Buffer time</div>
-            <div class="card-sub" style="line-height:1.5">Leave extra time between tasks. Transitions cost energy.</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:14px">
-          <i class="ti ti-bell" style="font-size:22px;color:var(--sky);flex-shrink:0;margin-top:2px"></i>
-          <div>
-            <div class="card-main" style="font-size:14px;margin-bottom:4px">Gentle reminders</div>
-            <div class="card-sub" style="line-height:1.5">Visual timers help when time blindness is real. Use Now\'s timer.</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:14px">
-          <i class="ti ti-eye" style="font-size:22px;color:var(--sky);flex-shrink:0;margin-top:2px"></i>
-          <div>
-            <div class="card-main" style="font-size:14px;margin-bottom:4px">Keep it visible</div>
-            <div class="card-sub" style="line-height:1.5">Out of sight = out of mind. Open tabs, sticky notes, whiteboards beat hidden apps.</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px">
-          <i class="ti ti-leaf" style="font-size:22px;color:var(--sky);flex-shrink:0;margin-top:2px"></i>
-          <div>
-            <div class="card-main" style="font-size:14px;margin-bottom:4px">Stay flexible</div>
-            <div class="card-sub" style="line-height:1.5">Rigid minute-by-minute plans cause anxiety when broken. Work with energy, not against it.</div>
-          </div>
+        <div>
+          <div style="font-size: 22px; font-weight: 800; color: #1a202c; letter-spacing: -0.5px;">Plan</div>
+          <div style="font-size: 15px; color: #4a5568;">Choose how to map out your day</div>
         </div>
       </div>
-    </div>`;
+
+      <!-- Planning Methodologies Grid -->
+      <div style="background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">PLANNING METHODS</div>
+        <div style="font-size: 14px; color: #4a5568; margin-bottom: 20px;">Different brains need different methods. Pick the one that fits how you feel right now.</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+          ${METHODOLOGIES.map(m => `
+            <button onclick="setPlanMode('${m.k}')" class="grid-action-btn method-btn" style="border-left: 6px solid var(--${m.color});">
+              <i class="ti ${m.icon}" style="color: var(--${m.color}); font-size: 24px; margin-bottom: 4px;"></i>
+              <span style="font-size: 15px; font-weight: 700; color: #2d3748;">${m.l}</span>
+              <span style="font-size: 12px; font-weight: 400; color: #718096; line-height: 1.4; margin-top: 2px;">${m.sub}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Quick Tools Grid (3-column) -->
+      <div style="background: #fff; border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
+        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">QUICK TOOLS</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <button onclick="setPlanMode('brainDump')" class="grid-action-btn">
+            <i class="ti ti-brain" style="color: var(--lavender, #7b61ff);"></i>
+            <span>Brain Dump</span>
+          </button>
+          <button onclick="setPlanMode('routines')" class="grid-action-btn">
+            <i class="ti ti-repeat" style="color: var(--sky, #3ea0e5);"></i>
+            <span>Routines</span>
+          </button>
+          <button onclick="setPlanMode('quickAdd')" class="grid-action-btn">
+            <i class="ti ti-plus" style="color: var(--teal, #2d8a7a);"></i>
+            <span>Quick Add</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Neuro-inclusive strategies (Styled like the Reset block) -->
+      <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 800; color: #a0aec0; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 16px;">STRATEGIES FOR ALL METHODS</div>
+        
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <i class="ti ti-hourglass" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Buffer time</div>
+              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Leave extra time between tasks. Transitions cost energy.</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <i class="ti ti-bell" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Gentle reminders</div>
+              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Visual timers help when time blindness is real. Use Now's timer.</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <i class="ti ti-eye" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Keep it visible</div>
+              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Out of sight = out of mind. Open tabs, sticky notes, whiteboards beat hidden apps.</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: flex-start;">
+            <i class="ti ti-leaf" style="font-size: 20px; color: #718096; flex-shrink: 0; margin-top: 2px;"></i>
+            <div>
+              <div style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 2px;">Stay flexible</div>
+              <div style="font-size: 13px; color: #4a5568; line-height: 1.5;">Rigid minute-by-minute plans cause anxiety when broken. Work with energy, not against it.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <style>
+      .grid-action-btn {
+        background: #fff;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        color: #2d3748;
+        font-family: inherit;
+      }
+      .grid-action-btn:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+      }
+      .grid-action-btn i {
+        font-size: 24px;
+      }
+      .grid-action-btn span {
+        font-size: 12px;
+        font-weight: 700;
+      }
+      /* Specific override for the methodologies to align text left */
+      .method-btn {
+        padding: 16px;
+        align-items: flex-start;
+        text-align: left;
+        gap: 4px;
+      }
+      .method-btn span {
+        font-size: 15px; /* Override the 12px */
+      }
+    </style>
+  `;
 }
 
 // ─── METHOD 1: Master List ───────────────────────────────
