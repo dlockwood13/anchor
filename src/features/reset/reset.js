@@ -247,6 +247,255 @@ const RESETS = [
   },
 ];
 
+import { state } from '../../data/state.js';
+import { register, setTopbar, go } from '../../app/router.js';
+
+// ─── Local state ──────────────────────────────────────────
+if (!state.resetView)   state.resetView   = 'picker';   // picker | flow | breathing | complete | journal
+if (state.resetStep === undefined) state.resetStep = 0;
+if (!state.resetOutcome) state.resetOutcome = null;
+
+// ─── Reset definitions ────────────────────────────────────
+// Each reset has: a colour, an intro, expanded steps (with type), and post-flow options.
+const RESETS = [
+  // ── 1. Overstimulation ─────────────────────────────────
+  {
+    k: 'over',
+    icon: 'ti-volume-3',
+    l: 'Too much input',
+    sub: 'Overstimulated, sensory overload',
+    color: 'peach',
+    intro: "When your senses are full, your thinking brain shuts down. The fix is not willpower — it's reducing input.",
+    steps: [
+      { type: 'action',    text: 'Move away from the loudest source of noise if you can.', tip: 'Even one room over makes a difference.' },
+      { type: 'action',    text: 'Lower the screen brightness on whatever device you can see right now.', tip: 'Brightness is sensory input too.' },
+      { type: 'action',    text: 'Put on headphones, earplugs, or pull a hood over your head.', tip: 'Block what you can.' },
+      { type: 'action',    text: 'Loosen anything tight: belt, waistband, collar, shoes.', tip: 'Skin contact matters.' },
+      { type: 'breathing', text: 'Slow exhale × 3', detail: 'Breathe out for 6 counts. Pause. Repeat 3 times. The exhale tells your nervous system you are safe.' },
+      { type: 'reflect',   text: 'What is still on?', detail: 'Notifications, screens, music, lights — what can you turn down or off right now?' },
+      { type: 'choice',    text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Sensory recovery can take 20–60 minutes. There is no rush.',
+  },
+
+  // ── 2. Understimulation ────────────────────────────────
+  {
+    k: 'under',
+    icon: 'ti-battery-1',
+    l: 'Too little stimulation',
+    sub: 'Understimulated, flat, restless',
+    color: 'amber',
+    intro: "Understimulated brains can't focus either. They need safe input first — then the task gets possible.",
+    steps: [
+      { type: 'action',  text: 'Put on familiar music — something with energy you like.', tip: 'Familiar matters more than new.' },
+      { type: 'action',  text: 'Pick up a fidget, stress ball, or tactile object.', tip: 'Anything to engage your hands.' },
+      { type: 'action',  text: 'Stand up and move for one minute.', tip: 'Stretch, pace, dance — whatever.' },
+      { type: 'action',  text: 'Walk to another room and back.', tip: 'Even small movement helps.' },
+      { type: 'action',  text: 'Make a drink — something with flavour.', tip: 'Cold water, tea, coffee, squash. Sip slowly.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: "If you're still flat, try a body-double timer — sometimes only structure breaks through.",
+  },
+
+  // ── 3. Can't start ─────────────────────────────────────
+  {
+    k: 'start',
+    icon: 'ti-player-pause',
+    l: "Can't start",
+    sub: 'Frozen, task paralysis',
+    color: 'lavender',
+    intro: "Freeze is real. It's not laziness. The way out is to shrink the task until your brain accepts it.",
+    steps: [
+      { type: 'reflect', text: 'What is the smallest possible first step?', detail: 'Not the first real step — the step before the first real step. Opening the email. Putting on shoes. Finding the file.' },
+      { type: 'action',  text: 'Set a 3-minute timer.', tip: "Just 3 minutes. You don't have to continue after." },
+      { type: 'action',  text: 'You only need to start. Not finish.', tip: 'Starting is the win.' },
+      { type: 'reflect', text: 'Notice the resistance without judging it.', detail: 'Your brain is doing what it does. You are not broken.' },
+      { type: 'action',  text: 'Begin — even if it feels wrong.', tip: 'Wrong-feeling progress is still progress.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Task paralysis often eases once you have momentum. Body doubling helps lock that in.',
+  },
+
+  // ── 4. Anxiety spike ───────────────────────────────────
+  {
+    k: 'anxiety',
+    icon: 'ti-wind',
+    l: 'Anxiety spike',
+    sub: 'Racing thoughts, tight chest',
+    color: 'sky',
+    intro: "Anxiety adds noise to everything. Reducing the noise is more useful than solving the worry.",
+    steps: [
+      { type: 'breathing', text: 'Slow exhale × 4', detail: 'Breathe out slowly for 4 counts. The exhale activates your calming nervous system.' },
+      { type: 'action',    text: 'Place your feet flat on the floor.', tip: 'Press down gently. Feel the ground.' },
+      { type: 'reflect',   text: 'Name 3 things you can see right now.', detail: 'Out loud or in your head. Just name them.' },
+      { type: 'reflect',   text: 'What is actually certain right now?', detail: 'Not what might happen. What is true at this moment.' },
+      { type: 'reflect',   text: 'What can wait until later?', detail: 'You do not have to solve everything in this hour.' },
+      { type: 'action',    text: 'Choose one very small action.', tip: 'Drink water. Send one text. Stand up. One thing.' },
+      { type: 'choice',    text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'If anxiety is high regularly, talking to your GP or therapist is a valid step.',
+  },
+
+  // ── 5. Change of plan ──────────────────────────────────
+  {
+    k: 'change',
+    icon: 'ti-route-x',
+    l: 'Change of plan',
+    sub: 'Something unexpected happened',
+    color: 'amber',
+    intro: "Change of plan is hard for neurodivergent brains. The plan in your head needs time to be replaced — that's a real cost.",
+    steps: [
+      { type: 'reflect', text: 'Pause. This is allowed.', detail: 'You do not need to immediately adapt. Give yourself a minute.' },
+      { type: 'reflect', text: 'What actually changed?', detail: 'Be specific. One sentence.' },
+      { type: 'reflect', text: 'What is still true?', detail: 'Most of the day is probably the same. Anchor to what stayed.' },
+      { type: 'reflect', text: 'What is urgent right now?', detail: 'Right now — not later, not maybe.' },
+      { type: 'reflect', text: 'What can move to later or tomorrow?', detail: 'Reduce the active list to what truly matters.' },
+      { type: 'action',  text: 'Choose the next single step.', tip: 'One thing only.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'After a change of plan, your brain may need a recovery buffer. Reduce demands for the next hour.',
+  },
+
+  // ── 6. Shutdown ────────────────────────────────────────
+  {
+    k: 'shutdown',
+    icon: 'ti-moon',
+    l: 'Shutdown',
+    sub: 'Withdrawn, empty, blank',
+    color: 'sky',
+    intro: "Shutdown is when your system protects you by switching off. Pushing through makes it worse. Essentials only.",
+    steps: [
+      { type: 'action',  text: 'Drink water — even a few sips.', tip: 'Dehydration deepens shutdown.' },
+      { type: 'action',  text: 'Eat something — anything. Toast, fruit, a snack.', tip: 'Low blood sugar mimics shutdown.' },
+      { type: 'action',  text: 'Lie down or sit somewhere quiet.', tip: 'Lower physical demands.' },
+      { type: 'reflect', text: 'No decisions right now.', detail: 'Decision-making is offline. Do not try to plan.' },
+      { type: 'reflect', text: 'Rest is valid. This is information, not failure.', detail: 'Your body is protecting you. Trust it.' },
+      { type: 'action',  text: 'Return when you are ready — no timeline.', tip: 'Some shutdowns last an hour. Some a day. Both are normal.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Shutdown recovery can take hours or days. Tell people you need quiet — that is a complete sentence.',
+  },
+
+  // ── 7. Decision overload ───────────────────────────────
+  {
+    k: 'decision',
+    icon: 'ti-brain',
+    l: 'Decision overload',
+    sub: 'Too many choices to make',
+    color: 'lavender',
+    intro: "When every option feels equally important, your brain can't pick. The fix is to remove options, not analyse them.",
+    steps: [
+      { type: 'reflect', text: 'Pause all decisions for the next 10 minutes.', detail: 'Set the timer mentally. Nothing has to be decided right now.' },
+      { type: 'reflect', text: 'What is the one most urgent thing?', detail: 'Urgent means: there are consequences within hours.' },
+      { type: 'reflect', text: 'Can anything wait 24 hours?', detail: "Be honest — most things can wait. They feel urgent but aren't." },
+      { type: 'action',  text: 'Choose the smallest available option.', tip: "When in doubt, pick the one with the lowest cost." },
+      { type: 'reflect', text: 'Nothing else until that one is done.', detail: 'Decision-making is a finite resource. Spend it on one thing.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'If decisions stack up regularly, try deciding less — automate, delegate, or just default to your usual choice.',
+  },
+
+  // ── 8. Social exhaustion ───────────────────────────────
+  {
+    k: 'social',
+    icon: 'ti-users',
+    l: 'Social exhaustion',
+    sub: 'After people, before recovery',
+    color: 'teal',
+    intro: "Social interaction costs energy for neurodivergent brains — masking, reading rooms, performing fluency. Recovery is not optional.",
+    steps: [
+      { type: 'action',  text: 'Find a quiet space — alone if possible.', tip: 'Bedroom, bathroom, parked car, an unused room.' },
+      { type: 'action',  text: 'Remove unnecessary stimulation — phone screen off if you can.', tip: 'Even friendly input is still input.' },
+      { type: 'reflect', text: 'Do not reply to anything yet.', detail: 'Messages will wait. You are not being rude.' },
+      { type: 'action',  text: 'Drink water.', tip: 'Always start here.' },
+      { type: 'action',  text: 'Sit or lie down for 10–15 minutes.', tip: 'Static rest. No scrolling.' },
+      { type: 'reflect', text: 'Come back to tasks only when you feel ready.', detail: 'Forcing it now leads to a worse crash later.' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Social events deserve recovery time built in advance — protect the hour after, every time.',
+  },
+
+  // ── 9. Meltdown risk ───────────────────────────────────
+  {
+    k: 'meltdown',
+    icon: 'ti-bolt',
+    l: 'Meltdown rising',
+    sub: 'About to lose control',
+    color: 'peach',
+    intro: "If you can feel a meltdown rising, you still have a small window. The aim is to reduce input fast — not to suppress feelings.",
+    steps: [
+      { type: 'action',    text: 'Get away from people if you can.', tip: 'Even briefly. A toilet, a corridor, a car.' },
+      { type: 'action',    text: 'Remove sensory input — eyes closed, headphones on, hood up.', tip: 'You do not have to function right now.' },
+      { type: 'breathing', text: 'Long exhale × 5', detail: 'Slow out-breaths for as many counts as you can. The longer the exhale, the more your system calms.' },
+      { type: 'action',    text: 'Press something firmly — palms together, hands on legs, weighted item.', tip: 'Deep pressure helps regulate.' },
+      { type: 'reflect',   text: 'You do not need to communicate right now.', detail: 'Words can come later. Survive this minute first.' },
+      { type: 'reflect',   text: 'Let it move through you if it needs to.', detail: 'Suppressing meltdowns extends them. Letting them happen safely shortens them.' },
+      { type: 'choice',    text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'After a meltdown, give yourself the rest of the day at minimum. Cancel what you can.',
+  },
+
+  // ── 10. Anger / frustration ────────────────────────────
+  {
+    k: 'anger',
+    icon: 'ti-flame',
+    l: 'Anger or frustration',
+    sub: 'Heat building, want to react',
+    color: 'amber',
+    intro: "Anger is data. Something feels wrong or unfair. The aim is to feel it without acting on it before you've cooled.",
+    steps: [
+      { type: 'action',    text: 'Delay any reply for 10 minutes.', tip: 'No texts, no emails, no Slack. Set the phone down.' },
+      { type: 'breathing', text: 'Slow exhale × 4', detail: 'Out for 6, pause, repeat. Three rounds minimum.' },
+      { type: 'action',    text: 'Move your body — pace, stretch, do 10 jumping jacks.', tip: 'Anger needs a physical outlet.' },
+      { type: 'reflect',   text: 'What specifically is making me angry?', detail: 'One sentence. Be concrete.' },
+      { type: 'reflect',   text: 'Is this about the present, or about something older?', detail: 'Both are valid — just notice which it is.' },
+      { type: 'reflect',   text: 'What would I want to say after I cool down?', detail: 'Not the heated version. The version you would be proud of tomorrow.' },
+      { type: 'choice',    text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Anger that does not pass after a reset may need to be talked through — with a person you trust, or a professional.',
+  },
+
+  // ── 11. Pain / chronic illness ─────────────────────────
+  {
+    k: 'pain',
+    icon: 'ti-bandage',
+    l: 'Pain or illness',
+    sub: 'Body is asking for less',
+    color: 'lavender',
+    intro: "Pain and illness reduce capacity — full stop. Today is a smaller-day. The plan must change.",
+    steps: [
+      { type: 'reflect', text: 'Today is a smaller day. That is allowed.', detail: 'Your capacity is real, not a setting you can change with effort.' },
+      { type: 'action',  text: 'Take any medication you need.', tip: 'Pain meds, anti-nausea, whatever you have.' },
+      { type: 'action',  text: 'Get comfortable — bed, sofa, blanket, water in reach.', tip: 'Set yourself up like you mean it.' },
+      { type: 'reflect', text: 'Pick the 1–3 things that truly must happen today.', detail: 'Drop the rest. Move them to a "later" list.' },
+      { type: 'action',  text: 'Tell someone you trust that you are struggling.', tip: 'Not for help — just to be witnessed.' },
+      { type: 'reflect', text: 'Recovery counts as a task today.', detail: "Rest is the work today. That's real." },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: 'Chronic pain deserves chronic accommodation — see your doctor if today is part of a longer pattern.',
+  },
+
+  // ── 12. I don't know what's wrong ──────────────────────
+  {
+    k: 'unknown',
+    icon: 'ti-question-mark',
+    l: "I don't know what's wrong",
+    sub: 'Something feels off',
+    color: 'sky',
+    intro: "Sometimes the brain just says 'no' and won't say why. That is also valid. Let's check the basics first.",
+    steps: [
+      { type: 'reflect', text: 'When did you last drink water?', detail: 'If more than 2 hours, drink some now.' },
+      { type: 'reflect', text: 'When did you last eat?', detail: 'If more than 4 hours, eat something — even small.' },
+      { type: 'reflect', text: 'How much sleep did you get?', detail: 'Under 6 hours puts everything in deficit.' },
+      { type: 'reflect', text: 'Are you in pain anywhere?', detail: 'Including tension, headaches, eye strain.' },
+      { type: 'reflect', text: 'When did you last go outside?', detail: 'Indoor-only days affect mood and energy.' },
+      { type: 'reflect', text: 'Are you waiting for news, or holding stress about something specific?', detail: 'Background worry shows up as "I don\'t know what\'s wrong".' },
+      { type: 'choice',  text: 'Choose what comes next.' },
+    ],
+    recoveryHint: "If you can't name what's wrong but it keeps happening, that's worth telling a GP or therapist.",
+  },
+];
+
 // ─── Picker view ───────────────────────────────────────────
 function renderPicker() {
   document.getElementById('content').innerHTML = `
