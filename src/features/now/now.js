@@ -187,18 +187,34 @@ function renderMain() {
 
   if (!cur) {
     document.getElementById('content').innerHTML = `
-      <div class="screen" style="max-width: 600px; margin: 0 auto;">
-        <div style="background: #e6f6ed; border: 2px solid #99d2b6; border-radius: 12px; padding: 24px; text-align: center; color: #1a4f3b; margin-bottom: 24px;">
-          <div style="font-size:18px;font-weight:700;margin-bottom:8px">All done for now.</div>
-          <div>Rest is valid. A smaller day still counts.</div>
+      <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+        
+        <!-- Empty State Hero -->
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 32px 24px; text-align: center; margin-bottom: 24px;">
+          <div style="width: 56px; height: 56px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #059669;">
+            <i class="ti ti-check" style="font-size: 32px;"></i>
+          </div>
+          <div style="font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">All done for now.</div>
+          <div style="font-size: 14px; color: #64748b; line-height: 1.5;">Rest is valid. A smaller day still counts.</div>
         </div>
-        <div style="display: grid; gap: 12px;">
-          <button class="btn primary" onclick="go('today')"><i class="ti ti-sun"></i> Back to Today</button>
-          <button class="btn" onclick="go('plan')"><i class="ti ti-plus"></i> Add something</button>
-          <button class="btn sky" onclick="go('reset')"><i class="ti ti-refresh"></i> Take a recovery moment</button>
-          <button class="btn lavender" onclick="nowSetView('titration')"><i class="ti ti-pill"></i> Titration log</button>
+
+        <!-- Quick Actions Grid -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
+          <button onclick="go('today')" class="grid-action-btn">
+            <i class="ti ti-sun" style="color: #d97706;"></i>
+            <span>Back to Today</span>
+          </button>
+          <button onclick="go('plan')" class="grid-action-btn">
+            <i class="ti ti-plus" style="color: #3b82f6;"></i>
+            <span>Add Task</span>
+          </button>
         </div>
-      </div>`;
+
+        ${renderHealthTools()}
+
+      </div>
+      ${actionGridStyles()}
+    `;
     return;
   }
 
@@ -206,7 +222,7 @@ function renderMain() {
     <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
       
       <!-- Main Task Card (thick left border, reduced size) -->
-      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; border-left: 6px solid var(--teal, #41967a); padding: 16px 20px; margin-bottom: 20px;">
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; border-left: 6px solid var(--teal, #41967a); padding: 16px 20px; margin-bottom: 24px;">
         <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">YOUR NEXT STEP</div>
         <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">${cur.text}</div>
         <div style="font-size: 13px; color: #64748b; margin-bottom: 12px;">${cur.meta || 'Essentials · 5 min'}</div>
@@ -234,8 +250,8 @@ function renderMain() {
         ` : ''}
       </div>
 
-      <!-- Settings Grid (Matching image_b02bc1.png layout) -->
-      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+      <!-- Settings Grid -->
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
         <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px;">NEED TO ADJUST?</div>
         <div style="font-size: 13px; color: #475569; margin-bottom: 16px; line-height: 1.5;">Pick whatever helps. There is no wrong answer, and you can change it later.</div>
         
@@ -267,23 +283,51 @@ function renderMain() {
         </div>
       </div>
 
-      <!-- Green Notice Block with Separated Buttons -->
-      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px;">
-        <div style="font-size: 13px; color: #065f46; line-height: 1.5; margin-bottom: 16px;">
-          <strong>Need a reset?</strong> If your brain is too loud or you are overwhelmed, step away from the task completely.
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <button onclick="go('reset')" style="flex: 1; padding: 10px; background: #d1fae5; border: 1.5px solid #065f46; color: #065f46; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: opacity 0.2s;">
-            Take a Reset
-          </button>
-          <button onclick="nowSetView('titration')" style="flex: 1; padding: 10px; background: #ffffff; border: 1.5px solid #a7f3d0; color: #065f46; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: opacity 0.2s;">
-            Titration Log
-          </button>
-        </div>
-      </div>
+      ${renderHealthTools()}
       
     </div>
     
+    ${actionGridStyles()}
+  `;
+}
+
+// ─── Reusable UI Helpers ───────────────────────────────────
+
+// Extracted the wellbeing block to share it with the empty state
+function renderHealthTools() {
+  return `
+    <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;">WELLBEING & HEALTH</div>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      
+      <!-- Reset Card (Green) -->
+      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: #065f46; margin-bottom: 2px;">Need a reset?</div>
+          <div style="font-size: 12px; color: #064e3b;">Step away from the task completely.</div>
+        </div>
+        <button onclick="go('reset')" style="flex-shrink: 0; padding: 10px 16px; background: #ffffff; border: 1.5px solid #a7f3d0; color: #059669; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: background 0.2s;">
+          Take a Reset
+        </button>
+      </div>
+
+      <!-- Titration Card (Lavender) -->
+      <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: #4c1d95; margin-bottom: 2px;">Titration Tracker</div>
+          <div style="font-size: 12px; color: #5b21b6;">Log medication effects and vitals.</div>
+        </div>
+        <button onclick="nowSetView('titration')" style="flex-shrink: 0; padding: 10px 16px; background: #ffffff; border: 1.5px solid #ddd6fe; color: #6d28d9; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: background 0.2s;">
+          Open Log
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+// Extracted the <style> block to keep the render function clean
+function actionGridStyles() {
+  return `
     <style>
       .grid-action-btn {
         background: #fff;
