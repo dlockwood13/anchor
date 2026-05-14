@@ -2,6 +2,9 @@ import { state, ACCENT } from '../../data/state.js';
 import { register, setTopbar, go } from '../../app/router.js';
 import { callClaude, TLDR_PROMPTS } from '../../services/api.js';
 
+// Expose 'go' globally for inline HTML onclick handlers
+window.go = go;
+
 // Init local state
 if (!state.tldrInput)        state.tldrInput = '';
 if (!state.tldrOutput)       state.tldrOutput = null;
@@ -11,80 +14,122 @@ if (!state.tldrHistory)      state.tldrHistory = [];
 if (!state.tldrParsedActions) state.tldrParsedActions = [];
 if (state.tldrShowHistory === undefined) state.tldrShowHistory = false;
 
-const MODE_LABELS = {
-  full:    { l: 'Summarize',     icon: 'ti-sparkles',      sub: 'Main point, details, actions, dates, tone' },
-  tone:    { l: 'Explain tone',  icon: 'ti-mood-neutral',  sub: 'What is clear, what is not, what not to assume' },
-  actions: { l: 'Action items',  icon: 'ti-checklist',     sub: 'Just the things you need to do' },
-  reply:   { l: 'Draft reply',   icon: 'ti-send',          sub: 'A short, calm response' },
+// ─── Shared Palette ────────────────────────────────────────
+const PALETTE = {
+  lavender: { bg: '#f5f3ff', border: '#ddd6fe', text: '#4c1d95', sub: '#6d28d9', icon: '#8b5cf6', badgeBg: '#ede9fe' },
+  teal:     { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', sub: '#059669', icon: '#10b981', badgeBg: '#d1fae5' },
+  sky:      { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', sub: '#0284c7', icon: '#0ea5e9', badgeBg: '#e0f2fe' },
+  amber:    { bg: '#fffbeb', border: '#fde68a', text: '#b45309', sub: '#d97706', icon: '#f59e0b', badgeBg: '#fef3c7' },
+  peach:    { bg: '#fef2f2', border: '#fecaca', text: '#9f1239', sub: '#be123c', icon: '#f43f5e', badgeBg: '#ffe4e6' },
+  default:  { bg: '#f8fafc', border: '#e2e8f0', text: '#1e293b', sub: '#64748b', icon: '#94a3b8', badgeBg: '#f1f5f9' }
 };
+
+const MODE_LABELS = {
+  full:    { l: 'Summarize',    icon: 'ti-sparkles',     sub: 'Main points, details & dates',     color: 'teal' },
+  tone:    { l: 'Explain tone', icon: 'ti-mood-neutral', sub: 'Read between the lines',           color: 'lavender' },
+  actions: { l: 'Action items', icon: 'ti-checklist',    sub: 'Just the things you need to do',   color: 'sky' },
+  reply:   { l: 'Draft reply',  icon: 'ti-send',         sub: 'A short, calm response template',  color: 'amber' },
+};
+
+function renderSectionHeader(title) {
+  return `
+    <div style="display: flex; align-items: center; gap: 12px; margin: 24px 0 16px;">
+      <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; white-space: nowrap;">${title}</div>
+      <div style="flex: 1; height: 1.5px; background: #e2e8f0;"></div>
+    </div>
+  `;
+}
 
 // ─── Main render ──────────────────────────────────────────
 export function renderTldr() {
   setTopbar('TL;DR Assist', 'Paste a message. Get what matters.');
 
   document.getElementById('content').innerHTML = `
-    <div class="screen">
-      <div class="notice blue">
-        Paste an email, letter, message, or instruction below. Bowline pulls out what matters.
+    <div class="screen" style="max-width: 600px; margin: 0 auto; font-family: system-ui, -apple-system, sans-serif;">
+      
+      <!-- Topbar Header -->
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+        <div style="width: 44px; height: 44px; background: var(--teal, #41967a); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+          <i class="ti ti-message-2" style="font-size: 24px;"></i>
+        </div>
+        <div>
+          <div style="font-size: 22px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">TL;DR Assist</div>
+          <div style="font-size: 15px; color: #64748b;">Paste a message. Get what matters.</div>
+        </div>
       </div>
 
-      <textarea id="tldr-input"
-        placeholder="Paste the message here..."
-        style="min-height:140px"
-        oninput="tldrUpdateInput(this.value)">${state.tldrInput}</textarea>
-
-      ${state.tldrInput ? `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 2px">
-          <span style="font-size:12px;color:var(--text-muted)">${state.tldrInput.length} characters</span>
-          <button onclick="tldrClear()" style="border:none;background:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:var(--font);text-decoration:underline">
-            Clear
-          </button>
+      <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 14px; color: #0369a1; line-height: 1.5;">
+          Paste an email, letter, message, or instruction below. Bowline pulls out what matters.
         </div>
-      ` : ''}
+      </div>
+
+      <!-- Input Area -->
+      <div style="margin-bottom: 24px;">
+        <textarea id="tldr-input"
+          placeholder="Paste the message here..."
+          style="width: 100%; min-height: 160px; padding: 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 15px; color: #334155; resize: vertical; box-sizing: border-box; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);"
+          oninput="tldrUpdateInput(this.value)">${state.tldrInput}</textarea>
+
+        ${state.tldrInput ? `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding: 0 4px;">
+            <span style="font-size: 12px; font-weight: 600; color: #94a3b8;">${state.tldrInput.length} characters</span>
+            <button onclick="tldrClear()" style="border: none; background: transparent; color: #f43f5e; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: underline;">
+              Clear text
+            </button>
+          </div>
+        ` : ''}
+      </div>
 
       <!-- Mode buttons -->
-      <div class="section-label" style="margin-top:1.25rem">What do you want?</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <button class="btn primary" style="margin:0;justify-content:center;padding:12px"
-                onclick="tldrRun('full')">
-          <i class="ti ti-sparkles"></i> Summarize
-        </button>
-        <button class="btn lavender" style="margin:0;justify-content:center;padding:12px"
-                onclick="tldrRun('tone')">
-          <i class="ti ti-mood-neutral"></i> Explain tone
-        </button>
-        <button class="btn sky" style="margin:0;justify-content:center;padding:12px"
-                onclick="tldrRun('actions')">
-          <i class="ti ti-checklist"></i> Action items
-        </button>
-        <button class="btn amber-btn" style="margin:0;justify-content:center;padding:12px"
-                onclick="tldrRun('reply')">
-          <i class="ti ti-send"></i> Draft reply
-        </button>
+      ${renderSectionHeader('WHAT DO YOU WANT?')}
+      
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
+        ${Object.entries(MODE_LABELS).map(([k, m]) => {
+          const pal = PALETTE[m.color];
+          return `
+            <button onclick="tldrRun('${k}')" 
+                    class="action-btn"
+                    style="background: #fff; border: 1.5px solid #e2e8f0; border-left: 6px solid ${pal.icon}; border-radius: 12px; padding: 16px 12px; text-align: left; cursor: pointer; transition: all 0.2s;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <i class="ti ${m.icon}" style="font-size: 20px; color: ${pal.text};"></i>
+                <div style="font-size: 15px; font-weight: 800; color: #1e293b;">${m.l}</div>
+              </div>
+              <div style="font-size: 12px; color: #64748b; line-height: 1.4; font-weight: 500;">${m.sub}</div>
+            </button>
+          `;
+        }).join('')}
       </div>
 
       <!-- Loading state -->
       ${state.tldrLoading ? `
-        <div class="card" style="margin-top:14px">
-          <div style="display:flex;align-items:center;gap:12px;padding:8px 0">
-            <div class="spinner"></div>
-            <span style="font-size:14px;color:var(--text-secondary)">
-              ${getLoadingMessage(state.tldrMode)}
-            </span>
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <div class="spinner" style="margin: 0 auto 12px;"></div>
+          <div style="font-size: 14px; font-weight: 600; color: #64748b;">
+            ${getLoadingMessage(state.tldrMode)}
           </div>
         </div>
       ` : ''}
 
       <!-- Output -->
-      ${state.tldrOutput ? renderOutput() : ''}
+      ${state.tldrOutput && !state.tldrLoading ? renderOutput() : ''}
 
       <!-- History -->
       ${state.tldrHistory.length > 0 ? renderHistory() : ''}
 
-      <!-- How it works -->
-      ${!state.tldrInput && !state.tldrOutput ? renderHowItWorks() : ''}
+      <!-- Privacy Notice -->
+      <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-top: 32px; margin-bottom: 24px;">
+        <div style="font-size: 13px; color: #065f46; line-height: 1.5;">
+          <strong>Privacy:</strong> The message is sent to an AI service to be analysed. It is not stored or used to train models.
+        </div>
+      </div>
 
-    </div>`;
+    </div>
+    
+    <style>
+      .action-btn:hover { background: #f8fafc !important; border-color: #cbd5e1 !important; }
+    </style>
+  `;
 }
 
 function getLoadingMessage(mode) {
@@ -100,50 +145,54 @@ function getLoadingMessage(mode) {
 // ─── Output card with extracted actions ──────────────────
 function renderOutput() {
   const mode = MODE_LABELS[state.tldrMode] || MODE_LABELS.full;
+  const pal = PALETTE[mode.color] || PALETTE.teal;
 
   return `
-    <div class="section-label" style="margin-top:1.5rem">
-      <i class="ti ${mode.icon}" style="color:var(--teal);font-size:14px"></i> ${mode.l}
-    </div>
+    ${renderSectionHeader('RESULT')}
 
-    <div class="card teal">
-      <div class="ai-out" style="margin:0;background:transparent;border:none;padding:0">${state.tldrOutput}</div>
+    <div style="background: ${pal.bg}; border: 1.5px solid ${pal.border}; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+        <i class="ti ${mode.icon}" style="font-size: 20px; color: ${pal.text};"></i>
+        <div style="font-size: 14px; font-weight: 800; color: ${pal.text}; text-transform: uppercase; letter-spacing: 1px;">${mode.l}</div>
+      </div>
+      
+      <div style="font-size: 15px; color: #1e293b; line-height: 1.6; white-space: pre-wrap;">${state.tldrOutput}</div>
     </div>
 
     <!-- Detected actions, if any -->
     ${state.tldrParsedActions.length > 0 ? `
-      <div class="section-label">
-        <i class="ti ti-plus" style="color:var(--lavender);font-size:14px"></i> Add to Today?
+      ${renderSectionHeader('DETECTED ACTIONS', 'ti-plus')}
+      
+      <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+        <div style="font-size: 13px; color: #0369a1;">Tap any action to add it to your Today list.</div>
       </div>
-      <div class="notice blue" style="margin-bottom:0.85rem">
-        Tap any action to add it to your tasks.
-      </div>
-      <div class="card" style="padding:0.5rem 1.25rem">
+      
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 24px;">
         ${state.tldrParsedActions.map((a, i) => `
-          <div class="task-row">
+          <div style="padding: 16px; display: flex; align-items: flex-start; gap: 16px; border-bottom: ${i < state.tldrParsedActions.length - 1 ? '1.5px solid #e2e8f0' : 'none'};">
             <button onclick="tldrAddAction(${i})"
-              style="border:none;background:var(--teal-l);color:var(--teal-d);width:26px;height:26px;border-radius:50%;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px"
+              style="width: 28px; height: 28px; border: none; background: #ecfdf5; color: #10b981; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
               aria-label="Add to Today">
-              <i class="ti ti-plus" style="font-size:14px"></i>
+              <i class="ti ti-plus" style="font-size: 16px;"></i>
             </button>
-            <div class="task-text" style="font-size:14px;font-weight:400;line-height:1.5">${a}</div>
+            <div style="font-size: 14px; font-weight: 500; color: #334155; line-height: 1.5; padding-top: 4px;">${a}</div>
           </div>
         `).join('')}
       </div>
     ` : ''}
 
     <!-- Output actions -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
-      <button class="btn" style="margin:0;justify-content:center" onclick="tldrCopy()">
-        <i class="ti ti-copy"></i> Copy
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+      <button onclick="tldrCopy(this)" style="padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 700; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+        <i class="ti ti-copy" style="font-size: 18px;"></i> Copy Result
       </button>
-      <button class="btn" style="margin:0;justify-content:center" onclick="tldrSaveAll()">
-        <i class="ti ti-calendar-plus"></i> Save all to Today
+      <button onclick="tldrSaveAll()" style="padding: 14px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 14px; font-weight: 700; color: #475569; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+        <i class="ti ti-calendar-plus" style="font-size: 18px; color: #0ea5e9;"></i> Save All to Today
       </button>
     </div>
 
-    <button class="btn" style="margin-top:4px;color:var(--text-muted)" onclick="tldrClearOutput()">
-      <i class="ti ti-x"></i> Clear result
+    <button onclick="tldrClearOutput()" style="width: 100%; padding: 14px; background: transparent; border: 1.5px dashed #cbd5e1; border-radius: 12px; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <i class="ti ti-x"></i> Clear Result
     </button>
   `;
 }
@@ -151,76 +200,49 @@ function renderOutput() {
 // ─── History view ────────────────────────────────────────
 function renderHistory() {
   return `
-    <div class="section-label" style="margin-top:1.5rem;cursor:pointer" onclick="tldrToggleHistory()">
-      <i class="ti ti-history" style="color:var(--text-muted);font-size:14px"></i>
-      Previous (${state.tldrHistory.length})
-      <i class="ti ${state.tldrShowHistory ? 'ti-chevron-up' : 'ti-chevron-down'}" style="margin-left:auto;font-size:14px"></i>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin: 32px 0 16px; cursor: pointer;" onclick="tldrToggleHistory()">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="ti ti-history" style="color: #8b5cf6; font-size: 18px;"></i>
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px;">PREVIOUS (${state.tldrHistory.length})</div>
+      </div>
+      <i class="ti ${state.tldrShowHistory ? 'ti-chevron-up' : 'ti-chevron-down'}" style="color: #94a3b8; font-size: 18px;"></i>
     </div>
+    
     ${state.tldrShowHistory ? `
-      <div class="card" style="padding:0.5rem 1.25rem">
-        ${state.tldrHistory.slice().reverse().map((h, idx) => `
-          <div class="task-row">
-            <i class="ti ${MODE_LABELS[h.mode]?.icon || 'ti-message-2'}" style="color:var(--teal);font-size:18px;margin-top:2px;flex-shrink:0"></i>
-            <div style="flex:1">
-              <div class="task-text" style="font-size:13px">${(h.input || '').slice(0, 60)}${(h.input || '').length > 60 ? '...' : ''}</div>
-              <div class="task-meta">${MODE_LABELS[h.mode]?.l || 'Result'} · ${h.time}</div>
+      <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        ${state.tldrHistory.slice().reverse().map((h, idx) => {
+          const modeInfo = MODE_LABELS[h.mode] || MODE_LABELS.full;
+          const pal = PALETTE[modeInfo.color] || PALETTE.teal;
+          return `
+            <div style="padding: 16px; display: flex; align-items: center; gap: 16px; border-bottom: 1.5px solid #e2e8f0;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: ${pal.bg}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="ti ${modeInfo.icon}" style="font-size: 18px; color: ${pal.text};"></i>
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  ${(h.input || '').slice(0, 60)}${(h.input || '').length > 60 ? '...' : ''}
+                </div>
+                <div style="font-size: 12px; color: #64748b; font-weight: 500;">
+                  ${modeInfo.l} · ${h.time}
+                </div>
+              </div>
+              <button onclick="tldrRestore(${state.tldrHistory.length - 1 - idx})"
+                style="border: none; background: transparent; color: #0ea5e9; cursor: pointer; padding: 8px; flex-shrink: 0;"
+                aria-label="Restore">
+                <i class="ti ti-rotate-clockwise" style="font-size: 20px;"></i>
+              </button>
             </div>
-            <button onclick="tldrRestore(${state.tldrHistory.length - 1 - idx})"
-              style="border:none;background:none;color:var(--teal);cursor:pointer;padding:4px"
-              aria-label="Restore">
-              <i class="ti ti-rotate-clockwise" style="font-size:16px"></i>
-            </button>
-          </div>
-        `).join('')}
-        <div class="task-row">
+          `;
+        }).join('')}
+        
+        <div style="padding: 12px; background: #f8fafc; text-align: center;">
           <button onclick="tldrClearHistory()"
-            style="border:none;background:none;color:var(--text-muted);cursor:pointer;font-family:var(--font);font-size:13px;text-decoration:underline">
-            Clear history
+            style="border: none; background: transparent; color: #f43f5e; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; text-decoration: underline;">
+            Clear all history
           </button>
         </div>
       </div>
     ` : ''}
-  `;
-}
-
-// ─── How it works (shown when empty) ─────────────────────
-function renderHowItWorks() {
-  return `
-    <div class="section-label" style="margin-top:1.5rem">How TL;DR helps</div>
-    <div class="card lavender">
-      <div style="display:flex;gap:10px;margin-bottom:14px">
-        <i class="ti ti-sparkles" style="font-size:22px;color:var(--lavender);flex-shrink:0;margin-top:2px"></i>
-        <div>
-          <div class="card-main" style="font-size:14px;margin-bottom:4px">Summarize</div>
-          <div class="card-sub" style="line-height:1.5">Pulls out the main point, key details, what you need to do, dates, and tone — in a clean format.</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:14px">
-        <i class="ti ti-mood-neutral" style="font-size:22px;color:var(--lavender);flex-shrink:0;margin-top:2px"></i>
-        <div>
-          <div class="card-main" style="font-size:14px;margin-bottom:4px">Explain tone</div>
-          <div class="card-sub" style="line-height:1.5">Tells you what tone is clear, what is not clear, and what you should not assume. Helpful when you cannot tell if someone is angry.</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:14px">
-        <i class="ti ti-checklist" style="font-size:22px;color:var(--lavender);flex-shrink:0;margin-top:2px"></i>
-        <div>
-          <div class="card-main" style="font-size:14px;margin-bottom:4px">Action items</div>
-          <div class="card-sub" style="line-height:1.5">Just the things you need to do, as a numbered list. Each one can be added to your Today list with one tap.</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px">
-        <i class="ti ti-send" style="font-size:22px;color:var(--lavender);flex-shrink:0;margin-top:2px"></i>
-        <div>
-          <div class="card-main" style="font-size:14px;margin-bottom:4px">Draft reply</div>
-          <div class="card-sub" style="line-height:1.5">Writes a short, calm response. Use it as a starting point and edit to sound like you.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="notice green">
-      <strong>Privacy:</strong> The message is sent to an AI service to be analysed. It is not stored or used to train models.
-    </div>
   `;
 }
 
@@ -399,11 +421,26 @@ window.tldrClearOutput = function () {
   renderTldr();
 };
 
-window.tldrCopy = function () {
+window.tldrCopy = function (btn) {
   if (!state.tldrOutput) return;
   navigator.clipboard.writeText(state.tldrOutput).catch(() => {});
-  // Brief visual confirmation
-  alert('Copied to clipboard.');
+  
+  if (btn) {
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-check" style="font-size: 18px; color: #10b981;"></i> Copied';
+    btn.style.borderColor = '#10b981';
+    btn.style.color = '#059669';
+    btn.style.background = '#ecfdf5';
+    
+    setTimeout(() => { 
+      btn.innerHTML = originalHTML; 
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.style.background = '';
+    }, 1500);
+  } else {
+    alert('Copied to clipboard.');
+  }
 };
 
 window.tldrAddAction = function (idx) {
