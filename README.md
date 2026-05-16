@@ -175,21 +175,21 @@ If you are in crisis, these come first:
 
 ## License
 
-**Copyright © 2025 D. Lockwood. All rights reserved.**
+**Copyright © 2026 D. Lockwood. All rights reserved.**
 
 Bowline is **proprietary software**. The source code is published in this repository for transparency and so users can see how the app works. It is **not open-source**.
 
 **You may:**
-- ✅ View and read the source code on GitHub
-- ✅ Run the app in your browser at [dlockwood13.github.io/Bowline](https://dlockwood13.github.io/Bowline/)
-- ✅ Cite Bowline in writing, research, or commentary, with attribution
+- View and read the source code on GitHub
+- Run the app in your browser at [dlockwood13.github.io/Bowline](https://dlockwood13.github.io/Bowline/)
+- Cite Bowline in writing, research, or commentary, with attribution
 
 **You may not, without prior written permission from the author:**
-- ❌ Copy, modify, or redistribute the source code or assets
-- ❌ Fork, host, or deploy your own version of the app
-- ❌ Use any part of the code in another project, open-source or commercial
-- ❌ Translate, port, or rebrand the app
-- ❌ Use Bowline's name, logo, or content for any product or service
+- Copy, modify, or redistribute the source code or assets
+- Fork, host, or deploy your own version of the app
+- Use any part of the code in another project, open-source or commercial
+- Translate, port, or rebrand the app
+- Use Bowline's name, logo, or content for any product or service
 
 If you would like to use, license, or build on Bowline in any way, please [open an issue](https://github.com/dlockwood13/Bowline/issues) or get in touch directly. Reasonable requests — especially from non-profit, educational, or community settings — are welcomed.
 
